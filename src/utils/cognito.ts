@@ -2,14 +2,17 @@ import { Tokens } from '../types/auth';
 
 export const COGNITO_DOMAIN = 'https://us-east-1vzrobltfk.auth.us-east-1.amazoncognito.com';
 export const CLIENT_ID = '75cobltus9jirug7n3hmibh2i4';
-export const REDIRECT_URI = 'http://localhost:5173/callback';
 export const SCOPES = 'openid email profile';
+
+export function getRedirectUri(): string {
+  return `${window.location.origin}/callback`;
+}
 
 export function getAuthorizationUrl(): string {
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: 'code',
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: getRedirectUri(),
     scope: SCOPES,
     identity_provider: 'Google',
   });
@@ -21,7 +24,7 @@ export async function exchangeCodeForTokens(code: string): Promise<Tokens> {
     grant_type: 'authorization_code',
     client_id: CLIENT_ID,
     code,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: getRedirectUri(),
   });
 
   const response = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
