@@ -1,11 +1,12 @@
 import { Tokens } from '../types/auth';
 
-export const COGNITO_DOMAIN = 'https://us-east-1vzrobltfk.auth.us-east-1.amazoncognito.com';
-export const CLIENT_ID = '75cobltus9jirug7n3hmibh2i4';
-export const SCOPES = 'openid email profile';
+const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN;
+const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
+const SCOPES = import.meta.env.VITE_COGNITO_SCOPE;
+const REDIRECT_URI_OVERRIDE = import.meta.env.VITE_REDIRECT_URI;
 
 export function getRedirectUri(): string {
-  return `${window.location.origin}/callback`;
+  return REDIRECT_URI_OVERRIDE || `${window.location.origin}/callback`;
 }
 
 export function getAuthorizationUrl(): string {
