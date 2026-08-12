@@ -5,6 +5,13 @@ const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
 const SCOPES = import.meta.env.VITE_COGNITO_SCOPE;
 const REDIRECT_URI_OVERRIDE = import.meta.env.VITE_REDIRECT_URI;
 
+console.log('[AUTH DEBUG] Cognito env vars:', {
+  VITE_COGNITO_DOMAIN: COGNITO_DOMAIN,
+  VITE_COGNITO_CLIENT_ID: CLIENT_ID,
+  VITE_COGNITO_SCOPE: SCOPES,
+  VITE_REDIRECT_URI: REDIRECT_URI_OVERRIDE,
+});
+
 export function getRedirectUri(): string {
   return REDIRECT_URI_OVERRIDE || `${window.location.origin}/callback`;
 }
