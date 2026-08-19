@@ -10,14 +10,29 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.3.1",
+    "@mui/material": "^9.3.1",
+    "aws-amplify": "^6.20.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "stylis": "^4.4.0",
+    "stylis-plugin-rtl": "^2.1.1"
   },
   "devDependencies": {
+    "@aws-amplify/backend": "^1.24.0",
+    "@aws-amplify/backend-cli": "^1.9.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/stylis": "^4.2.7",
     "@vitejs/plugin-react": "^6.0.4",
+    "aws-cdk-lib": "^2.244.0",
+    "constructs": "^10.8.1",
+    "esbuild": "^0.28.2",
     "oxlint": "^1.75.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
     "vite": "^8.2.0"
   }
 }

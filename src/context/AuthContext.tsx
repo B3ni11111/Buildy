@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode, Suspense } from 'react';
-import SignIn from '../components/SignIn';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import Callback from '../components/Callback';
 import { AuthContextType, Tokens, UserInfo } from '../types/auth';
 import { getStoredTokens, isTokenValid, clearTokens, decodeIdToken } from '../utils/cognito';
+import { clearOnboardingData } from '../utils/onboarding';
+import { Box, CircularProgress } from '@mui/material';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -30,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     clearTokens();
+    clearOnboardingData();
     setTokens(null);
     setUser(null);
     setIsAuthenticated(false);
@@ -67,14 +69,19 @@ function AuthContextRouter({
   }
 
   if (isLoading) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Loading...</div>;
-  }
-
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('AuthContext must be used within AuthProvider');
-
-  if (!context.isAuthenticated) {
-    return <SignIn />;
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return <>{children}</>;

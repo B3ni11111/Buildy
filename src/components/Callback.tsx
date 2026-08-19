@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Box, Button, Card, CardContent, CircularProgress, Container, Stack, Typography } from '@mui/material';
 import { exchangeCodeForTokens, saveTokens } from '../utils/cognito';
 
 export default function Callback() {
@@ -47,117 +48,90 @@ export default function Callback() {
 
   if (isProcessing) {
     return (
-      <div
-        style={{
+      <Box
+        sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          bgcolor: 'background.default',
+          py: 4,
+          px: 2,
         }}
       >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '50px',
-              height: '50px',
-              margin: '0 auto 1.5rem',
-              border: '4px solid rgba(255,255,255,0.3)',
-              borderTopColor: 'white',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }}
-          />
-          <h2 style={{ color: 'white', marginBottom: '0.5rem' }}>Processing sign-in...</h2>
-          <p style={{ color: 'rgba(255,255,255,0.8)' }}>
-            Completing your login securely
-          </p>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      </div>
+        <Stack sx={{ textAlign: 'center' }} spacing={3} alignItems="center">
+          <CircularProgress sx={{ color: 'primary.main' }} />
+          <Box>
+            <Typography
+              variant="h4"
+              sx={{
+                fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                fontWeight: 600,
+                mb: 1,
+              }}
+            >
+              Processing sign-in...
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Completing your login securely
+            </Typography>
+          </Box>
+        </Stack>
+      </Box>
     );
   }
 
   return (
-    <div
-      style={{
+    <Box
+      sx={{
+        minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        bgcolor: 'background.default',
+        py: 4,
+        px: 2,
       }}
     >
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '2.5rem',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
-          maxWidth: '420px',
-        }}
-      >
-        <div
-          style={{
-            fontSize: '3rem',
-            marginBottom: '1rem',
-          }}
-        >
-          ⚠️
-        </div>
-        <h2
-          style={{
-            fontSize: '1.5rem',
-            fontWeight: 700,
-            color: '#c53030',
-            marginBottom: '0.5rem',
-          }}
-        >
-          Sign-in Failed
-        </h2>
-        <p
-          style={{
-            color: '#718096',
-            marginBottom: '2rem',
-            fontSize: '0.95rem',
-            lineHeight: 1.6,
-          }}
-        >
-          {error}
-        </p>
-        <button
-          onClick={() => (window.location.href = '/')}
-          style={{
-            width: '100%',
-            padding: '0.875rem 1.5rem',
-            fontSize: '0.95rem',
-            backgroundColor: '#c53030',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#9b2c2c';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(197, 48, 48, 0.3)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#c53030';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          Try Again
-        </button>
-      </div>
-    </div>
+      <Container maxWidth="sm">
+        <Stack spacing={3} sx={{ textAlign: 'center' }}>
+          <Box sx={{ fontSize: '3rem' }}>⚠️</Box>
+          <Box>
+            <Typography
+              variant="h3"
+              sx={{
+                fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                fontWeight: 600,
+                color: 'error.main',
+                mb: 1,
+              }}
+            >
+              Sign-in Failed
+            </Typography>
+            <Typography color="text.secondary" variant="body2">
+              {error}
+            </Typography>
+          </Box>
+
+          <Card variant="outlined" sx={{ borderRadius: 4 }}>
+            <CardContent sx={{ pt: 3, pb: 3 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => (window.location.href = '/')}
+                fullWidth
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                }}
+              >
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </Stack>
+      </Container>
+    </Box>
   );
 }
