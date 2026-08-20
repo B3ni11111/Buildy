@@ -1,11 +1,13 @@
 version: 1
 frontend:
   phases:
-    # Install production dependencies only (skip heavy backend AWS CDK tools)
+    # Install dependencies with legacy peer deps support
+    # Using npm install instead of npm ci due to package.json peer dependency conflicts
+    # (aws-amplify ecosystem has complex peer dep tree)
     preBuild:
       commands:
-        - echo "Installing production dependencies..."
-        - npm ci --omit=dev
+        - echo "Installing dependencies..."
+        - npm install --legacy-peer-deps --omit=dev
         - echo "Dependency installation complete"
 
     # Build the React app with injected Cognito OAuth configuration
