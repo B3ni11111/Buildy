@@ -59,7 +59,7 @@ export default function Callback() {
           px: 2,
         }}
       >
-        <Stack sx={{ textAlign: 'center' }} spacing={3} alignItems="center">
+        <Stack sx={{ textAlign: 'center', alignItems: 'center' }} spacing={3}>
           <CircularProgress sx={{ color: 'primary.main' }} />
           <Box>
             <Typography
