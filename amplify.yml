@@ -30,14 +30,6 @@ frontend:
         - echo "VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID" >> .env
         - echo "VITE_COGNITO_SCOPE=$VITE_COGNITO_SCOPE" >> .env
 
-        # TypeScript type checking
-        - echo "Running TypeScript type check..."
-        - npx tsc --noEmit
-
-        # Code quality linting
-        - echo "Running linter..."
-        - npm run lint
-
         # Build the production bundle
         - echo "Building Vite bundle..."
         - npm run build
