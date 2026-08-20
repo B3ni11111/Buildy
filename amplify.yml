@@ -1,11 +1,11 @@
 version: 1
 frontend:
   phases:
-    # Install dependencies from package-lock.json for deterministic builds
+    # Install production dependencies only (skip heavy backend AWS CDK tools)
     preBuild:
       commands:
-        - echo "Installing dependencies..."
-        - npm ci
+        - echo "Installing production dependencies..."
+        - npm ci --omit=dev
         - echo "Dependency installation complete"
 
     # Build the React app with injected Cognito OAuth configuration
