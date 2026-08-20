@@ -1,19 +1,56 @@
 version: 1
 frontend:
   phases:
+    # Install dependencies from package-lock.json for deterministic builds
     preBuild:
       commands:
+        - echo "Installing dependencies..."
         - npm ci
+        - echo "Dependency installation complete"
+
+    # Build the React app with injected Cognito OAuth configuration
     build:
       commands:
+        # Validate that required environment variables are set in Amplify console
+        - |
+          if [ -z "$VITE_COGNITO_DOMAIN" ] || [ -z "$VITE_COGNITO_CLIENT_ID" ] || [ -z "$VITE_COGNITO_SCOPE" ]; then
+            echo "ERROR: Missing required environment variables"
+            echo "Set these in Amplify App Settings > Environment Variables:"
+            echo "  - VITE_COGNITO_DOMAIN (e.g., https://us-east-1xyz.auth.us-east-1.amazoncognito.com)"
+            echo "  - VITE_COGNITO_CLIENT_ID (e.g., abc123def456)"
+            echo "  - VITE_COGNITO_SCOPE (e.g., openid email profile)"
+            exit 1
+          fi
+
+        # Inject Cognito OAuth configuration from environment variables
+        - echo "Configuring Cognito OAuth..."
         - echo "VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN" >> .env
         - echo "VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID" >> .env
         - echo "VITE_COGNITO_SCOPE=$VITE_COGNITO_SCOPE" >> .env
+
+        # TypeScript type checking
+        - echo "Running TypeScript type check..."
+        - npx tsc --noEmit
+
+        # Code quality linting
+        - echo "Running linter..."
+        - npm run lint
+
+        # Build the production bundle
+        - echo "Building Vite bundle..."
         - npm run build
+        - echo "Build complete - output in dist/"
+
+  # Configure build artifacts
   artifacts:
     baseDirectory: dist
     files:
       - '**/*'
+
+  # Cache npm dependencies between builds for faster CI/CD
   cache:
     paths:
       - node_modules/**/*
+
+  # Amplify Hosting SPA routing: redirects 404s to index.html for client-side routing
+  appRoot: dist
