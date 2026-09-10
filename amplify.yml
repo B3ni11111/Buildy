@@ -7,7 +7,7 @@ frontend:
     preBuild:
       commands:
         - echo "Installing dependencies..."
-        - npm install --legacy-peer-deps --omit=dev
+        - cd frontend && npm install --legacy-peer-deps --omit=dev
         - echo "Dependency installation complete"
 
     # Build the React app with injected Cognito OAuth configuration
@@ -26,25 +26,25 @@ frontend:
 
         # Inject Cognito OAuth configuration from environment variables
         - echo "Configuring Cognito OAuth..."
-        - echo "VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN" >> .env
-        - echo "VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID" >> .env
-        - echo "VITE_COGNITO_SCOPE=$VITE_COGNITO_SCOPE" >> .env
+        - echo "VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN" >> frontend/.env
+        - echo "VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID" >> frontend/.env
+        - echo "VITE_COGNITO_SCOPE=$VITE_COGNITO_SCOPE" >> frontend/.env
 
         # Build the production bundle
         - echo "Building Vite bundle..."
-        - npm run build
-        - echo "Build complete - output in dist/"
+        - cd frontend && npm run build
+        - echo "Build complete - output in frontend/dist/"
 
   # Configure build artifacts
   artifacts:
-    baseDirectory: dist
+    baseDirectory: frontend/dist
     files:
       - '**/*'
 
   # Cache npm dependencies between builds for faster CI/CD
   cache:
     paths:
-      - node_modules/**/*
+      - frontend/node_modules/**/*
 
   # Amplify Hosting SPA routing: redirects 404s to index.html for client-side routing
-  appRoot: dist
+  appRoot: frontend/dist

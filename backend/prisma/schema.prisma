@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String    @id @default(uuid())
+  cognitoSub        String    @unique
+  email             String?   @unique
+  name              String?
+  language          String?
+  userType          String?
+  onboardedAt       DateTime?
+  currentBuildingId String?
+  currentBuilding   Building? @relation(fields: [currentBuildingId], references: [id])
+  issues            Issue[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Building {
+  id           String   @id @default(uuid())
+  name         String
+  address      String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  users        User[]
+  issues       Issue[]
+}
+
+model Issue {
+  id          String   @id @default(uuid())
+  buildingId  String
+  building    Building @relation(fields: [buildingId], references: [id])
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+*.tsbuildinfo
 .env
 .env.local
 .DS_Store
@@ -18,5 +19,5 @@ node_modules
 .amplify
 amplify_outputs*
 amplifyconfiguration*
-/amplify/outputs
-/amplify_outputs*
+/frontend/amplify/outputs
+/frontend/amplify_outputs*
