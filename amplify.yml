@@ -24,16 +24,19 @@ frontend:
             exit 1
           fi
 
-        # Inject Cognito OAuth configuration from environment variables
-        - echo "Configuring Cognito OAuth..."
-        - echo "VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN" >> frontend/.env
-        - echo "VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID" >> frontend/.env
-        - echo "VITE_COGNITO_SCOPE=$VITE_COGNITO_SCOPE" >> frontend/.env
-
-        # Build the production bundle
-        - echo "Building Vite bundle..."
-        - cd frontend && npm run build
-        - echo "Build complete - output in frontend/dist/"
+        # Everything below runs as one shell script, so `cd frontend` here
+        # reliably applies to every line that follows it — unlike separate
+        # top-level command list items, which aren't guaranteed to share
+        # working-directory state with each other.
+        - |
+          echo "Configuring Cognito OAuth..."
+          cd frontend
+          echo "VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN" >> .env
+          echo "VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID" >> .env
+          echo "VITE_COGNITO_SCOPE=$VITE_COGNITO_SCOPE" >> .env
+          echo "Building Vite bundle..."
+          npm run build
+          echo "Build complete - output in frontend/dist/"
 
   # Configure build artifacts
   artifacts:
@@ -45,6 +48,3 @@ frontend:
   cache:
     paths:
       - frontend/node_modules/**/*
-
-  # Amplify Hosting SPA routing: redirects 404s to index.html for client-side routing
-  appRoot: frontend/dist
