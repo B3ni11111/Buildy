@@ -1,114 +1,81 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# buildy — backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS + Prisma 7 + PostgreSQL. Serves the buildy API on port 3000. See the [root README](../README.md) for what the app does and [DEVLOG](../DEVLOG.md) for decisions and gotchas.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Layout
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+src/
+  auth/        CognitoAuthGuard (global — verifies the Cognito id_token on every request), AdminGuard, @CurrentUser
+  users/       GET/PUT the signed-in user's profile
+  buildings/   joining/leaving, the user's building view, members list, own unit details
+  messages/    building messages
+  docs/        document upload / download / rename / delete (multer, files on disk)
+  admin/       admin-only building, contact-link and member management
+  cities/      the city list (for the building wizard)
+prisma/
+  schema.prisma, migrations/, seed.ts (cities + demo buildings), data/cities.json, grant-admin.ts
 ```
 
-## Compile and run the project
+## Access rules
+
+- Every route needs a valid Cognito **id token** (`Authorization: Bearer …`).
+- Building data (messages, docs, members) requires membership of that building — or `users.is_admin`.
+- Messages and docs can be changed by their author/uploader, or by an admin.
+- Everything under `/admin` requires `users.is_admin` (`AdminGuard`).
+
+## API
+
+| Method & path | Who | What |
+|---|---|---|
+| `GET /users/me` | any | The signed-in user (created on first call). |
+| `PUT /users/me/onboarding` | any | Save name, language, user type. |
+| `GET /buildings` | any | Buildings to choose from when joining. |
+| `GET /buildings/me` | any | The user's building: details, contact links, member count, their own unit — or `null`. |
+| `POST /buildings/join` | any | `{ buildingId, password }` — join (replaces any previous building). |
+| `POST /buildings/leave` | any | Leave the current building. |
+| `PATCH /buildings/me/membership` | member | Update own unit: apartment, floor, relationType, sqrm, paymentMethod. |
+| `GET /buildings/:id/members` | member/admin | Members with unit and role, committee first. |
+| `GET /buildings/:id/messages` · `POST` | member/admin | List / post (`{ title, description?, type? }`). |
+| `PATCH /messages/:id` · `DELETE` | author/admin | Edit / delete a message. |
+| `GET /buildings/:id/docs` · `POST` | member/admin | List / upload (`multipart/form-data`: `file`, optional `title`; ≤ 10 MB; PDF, Office, images, text). |
+| `GET /docs/:id/file` | member/admin | Download the file. |
+| `PATCH /docs/:id` · `DELETE` | uploader/admin | Rename (`{ title }`) / delete (also removes the file). |
+| `GET /cities` | any | All cities (CBS codes + names). |
+| `GET /admin/buildings` · `POST` | admin | List (with counts and contact links) / create (optionally with `contactLinks`). |
+| `PATCH /admin/buildings/:id` · `DELETE` | admin | Edit (omit `password` to keep it) / delete (cascades to everything in the building). |
+| `POST /admin/buildings/:id/contact-links` | admin | `{ type: whatsapp\|phone\|email, link }` — WhatsApp must be `https://`. |
+| `DELETE /admin/contact-links/:id` | admin | Remove a contact link. |
+| `PUT /admin/buildings/:id/members/:userId/role` | admin | `{ role: committee_head\|committee_member\|manager\|resident }`. |
+| `DELETE /admin/buildings/:id/members/:userId` | admin | Remove a member from the building. |
+
+Errors use normal HTTP codes: 400 validation / unsupported file, 401 no or bad token, 403 not allowed, 404 not found, 409 duplicate building address in a city, 413 file too large.
+
+## Environment
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Postgres connection string. |
+| `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` | Used to verify id tokens. |
+| `CORS_ORIGIN` | Allowed frontend origin(s), comma-separated. |
+| `UPLOADS_DIR` | Where uploaded files are stored (default `./uploads`; `/app/uploads` volume in Docker). |
+| `PORT` | Default 3000. |
+
+Copy `.env.example` to `.env` for bare-metal runs; Docker Compose sets these itself.
+
+## Common commands
 
 ```bash
-# development
-$ npm run start
+# in Docker (normal workflow)
+docker compose exec backend npm run admin:grant -- someone@example.com   # make an admin (--revoke to undo)
+docker compose exec backend npx prisma migrate deploy                     # apply migrations
+docker compose exec backend npx prisma db seed                            # re-run the (idempotent) seed
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# bare metal
+npm install
+npm run start:dev      # watch mode
+npm run build && npm run lint && npm test
 ```
 
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+New migration: edit `prisma/schema.prisma`, then either `npx prisma migrate dev --name <name>` (interactive), or generate the SQL with
+`npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script` into a new `prisma/migrations/<timestamp>_<name>/migration.sql` and run `npx prisma migrate deploy`.

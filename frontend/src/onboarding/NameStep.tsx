@@ -45,14 +45,14 @@ export default function NameStep({ initialValue, onSubmit, onBack }: NameStepPro
             transition: 'all 0.2s ease',
             fontSize: '1rem',
             '& fieldset': {
-              borderColor: '#E3E2DB',
+              borderColor: 'divider',
             },
             '&:hover fieldset': {
-              borderColor: '#3A5A40',
+              borderColor: 'primary.main',
               borderWidth: '1.5px',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#3A5A40',
+              borderColor: 'primary.main',
               borderWidth: '1.5px',
             },
           },

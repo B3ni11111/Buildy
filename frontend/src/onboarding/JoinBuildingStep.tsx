@@ -5,7 +5,7 @@ import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StepShell from './StepShell';
 import ConfirmCheck from './ConfirmCheck';
-import { Building } from '../types/building';
+import { Building, BuildingSummary } from '../types/building';
 import { api, ApiError } from '../utils/api';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -16,7 +16,7 @@ interface JoinBuildingStepProps {
 
 export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStepProps) {
   const { t } = useLanguage();
-  const [buildings, setBuildings] = useState<Building[] | null>(null);
+  const [buildings, setBuildings] = useState<BuildingSummary[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,12 @@ export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStep
       .then((list) => {
         if (!cancelled) setBuildings(list);
       })
-      .catch(() => {
-        if (!cancelled) setBuildings([]);
+      .catch((err) => {
+        console.error('Failed to load buildings', err);
+        if (!cancelled) {
+          setBuildings([]);
+          setError(t('joinBuilding.genericError'));
+        }
       });
     return () => {
       cancelled = true;

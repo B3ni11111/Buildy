@@ -21,3 +21,6 @@ amplify_outputs*
 amplifyconfiguration*
 /frontend/amplify/outputs
 /frontend/amplify_outputs*
+
+# Uploaded documents (bare-metal backend runs)
+backend/uploads/

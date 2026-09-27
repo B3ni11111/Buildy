@@ -1,162 +1,44 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CacheProvider } from '@emotion/react';
-import { Box, CircularProgress, CssBaseline, ThemeProvider, createTheme, type Theme } from '@mui/material';
+import { Box, Button, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
 import Home from './components/Home';
-import Settings from './components/Settings';
+import Settings, { type SettingsSection } from './components/Settings';
 import Dashboard from './components/Dashboard';
 import OnboardingFlow from './onboarding/OnboardingFlow';
 import JoinBuildingStep from './onboarding/JoinBuildingStep';
+import AdminPanel from './admin/AdminPanel';
+import CreateBuildingWizard from './admin/CreateBuildingWizard';
 import { useAuth } from './context/AuthContext';
 import { useLanguage } from './i18n/LanguageContext';
 import { getOnboardingData } from './utils/onboarding';
 import { ltrCache, rtlCache } from './i18n/rtlCache';
 import { api } from './utils/api';
+import { getTheme } from './theme';
+import { useColorMode } from './context/ColorModeContext';
 import type { OnboardingData } from './types/onboarding';
-import type { Building } from './types/building';
-
-// Classic, minimal, no-neon palette: a muted forest green anchor on warm
-// neutral grays, soft rounded corners, and a serif accent for headings.
-// Direction is threaded through so Hebrew/Arabic mirror correctly.
-function getTheme(direction: 'ltr' | 'rtl'): Theme {
-  return createTheme({
-    direction,
-    palette: {
-      mode: 'light',
-      primary: {
-        main: '#3A5A40',
-        light: '#6B8F71',
-        dark: '#2A4030',
-        contrastText: '#FFFFFF',
-      },
-      secondary: {
-        main: '#5B6660',
-      },
-      background: {
-        default: '#F7F6F3',
-        paper: '#FFFFFF',
-      },
-      text: {
-        primary: '#22261F',
-        secondary: '#5B6660',
-      },
-      divider: '#E3E2DB',
-    },
-    shape: {
-      borderRadius: 14,
-    },
-    typography: {
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      h1: {
-        fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
-        fontSize: '2.5rem',
-        fontWeight: 600,
-        lineHeight: 1.2,
-        letterSpacing: '-0.01em',
-      },
-      h2: {
-        fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
-        fontSize: '2rem',
-        fontWeight: 600,
-        lineHeight: 1.3,
-      },
-      h3: {
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        fontSize: '1.5rem',
-        fontWeight: 600,
-        lineHeight: 1.3,
-      },
-      h4: {
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        fontSize: '1.125rem',
-        fontWeight: 600,
-        lineHeight: 1.4,
-      },
-      body1: {
-        fontSize: '1rem',
-        lineHeight: 1.6,
-        fontWeight: 400,
-      },
-      body2: {
-        fontSize: '0.875rem',
-        lineHeight: 1.5,
-        fontWeight: 400,
-      },
-    },
-    components: {
-      MuiButton: {
-        defaultProps: { disableElevation: true },
-        styleOverrides: {
-          root: {
-            borderRadius: 10,
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              transform: 'translateY(-1px)',
-            },
-          },
-          contained: {
-            boxShadow: '0 2px 8px rgba(58, 90, 64, 0.12)',
-            '&:hover': {
-              boxShadow: '0 4px 16px rgba(58, 90, 64, 0.16)',
-            },
-          },
-        },
-      },
-      MuiButtonBase: {
-        styleOverrides: {
-          root: {
-            '&.Mui-focusVisible': {
-              outline: '2px solid #3A5A40',
-              outlineOffset: 2,
-            },
-          },
-        },
-      },
-      MuiCard: {
-        styleOverrides: {
-          root: {
-            boxShadow: '0 1px 3px rgba(20, 24, 18, 0.05), 0 4px 12px rgba(20, 24, 18, 0.06)',
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              boxShadow: '0 2px 6px rgba(20, 24, 18, 0.08), 0 8px 20px rgba(20, 24, 18, 0.08)',
-            },
-          },
-        },
-      },
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            backgroundImage: 'none',
-            transition: 'all 0.2s ease',
-          },
-        },
-      },
-      MuiTextField: {
-        styleOverrides: {
-          root: {
-            '& .MuiOutlinedInput-root': {
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                borderColor: '#3A5A40',
-              },
-              '&.Mui-focused': {
-                boxShadow: '0 0 0 3px rgba(58, 90, 64, 0.1)',
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-}
+import type { Building, CurrentUser } from './types/building';
 
 function App() {
   const { isAuthenticated, user, tokens } = useAuth();
-  const { dir } = useLanguage();
-  const [showSettings, setShowSettings] = useState(false);
+  const { dir, t } = useLanguage();
+  const [view, setView] = useState<'home' | 'settings' | 'admin' | 'createBuilding'>('home');
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('profile');
+  // Admins can preview the app as a resident; remembered on this device.
+  const [viewAsResident, setViewAsResident] = useState(() => {
+    try {
+      return localStorage.getItem('buildy_view_as_resident') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [profile, setProfile] = useState<OnboardingData | null>(() => getOnboardingData());
   const [building, setBuilding] = useState<Building | null | undefined>(undefined);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  // Bumped to refetch the user's building (e.g. after an admin edits or deletes it).
+  const [buildingReload, setBuildingReload] = useState(0);
 
-  const theme = useMemo(() => getTheme(dir), [dir]);
+  const { mode } = useColorMode();
+  const theme = useMemo(() => getTheme(dir, mode), [dir, mode]);
 
   useEffect(() => {
     if (!isAuthenticated || !profile || !tokens) {
@@ -172,16 +54,47 @@ function App() {
       .catch(() => {
         if (!cancelled) setBuilding(null);
       });
+    api
+      .getMe(tokens.id_token)
+      .then(async (me) => {
+        // The onboarding profile lives in the browser; mirror it to the backend so
+        // neighbours see real names on members and messages.
+        const needsSync = me.name !== profile.name;
+        const synced = needsSync ? await api.updateProfile(tokens.id_token, profile) : me;
+        if (!cancelled) setCurrentUser(synced);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, profile, tokens]);
+  }, [isAuthenticated, profile, tokens, buildingReload]);
 
   const handleLeaveBuilding = async () => {
     if (!tokens) return;
     await api.leaveBuilding(tokens.id_token);
     setBuilding(null);
-    setShowSettings(false);
+    setView('home');
+  };
+
+  const isRealAdmin = !!currentUser?.isAdmin;
+  // Everything below uses the *effective* user, so "view as resident" hides admin tools everywhere.
+  const isAdmin = isRealAdmin && !viewAsResident;
+  const effectiveUser = currentUser && { ...currentUser, isAdmin };
+
+  const toggleViewAsResident = () => {
+    const next = !viewAsResident;
+    setViewAsResident(next);
+    try {
+      localStorage.setItem('buildy_view_as_resident', String(next));
+    } catch {
+      // not persisted — still applies for this session
+    }
+    if (next && (view === 'admin' || view === 'createBuilding')) setView('home');
+  };
+
+  const openSettings = (section: SettingsSection) => {
+    setSettingsSection(section);
+    setView('settings');
   };
 
   let content;
@@ -190,6 +103,28 @@ function App() {
   } else if (!profile) {
     // Config gate: the home page only appears once onboarding is complete.
     content = <OnboardingFlow defaultName={user?.name} onComplete={setProfile} />;
+  } else if (isAdmin && view === 'createBuilding') {
+    content = (
+      <CreateBuildingWizard
+        idToken={tokens!.id_token}
+        onCancel={() => setView('admin')}
+        onDone={() => {
+          setBuildingReload((n) => n + 1);
+          setView('admin');
+        }}
+      />
+    );
+  } else if (isAdmin && view === 'admin') {
+    // Before the building gate on purpose: admins manage buildings even when they belong to none.
+    content = (
+      <AdminPanel
+        idToken={tokens!.id_token}
+        currentUser={effectiveUser!}
+        onCreateBuilding={() => setView('createBuilding')}
+        onBack={() => setView(building ? 'settings' : 'home')}
+        onBuildingsChanged={() => setBuildingReload((n) => n + 1)}
+      />
+    );
   } else if (building === undefined) {
     content = (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -200,14 +135,31 @@ function App() {
     // Second, separate gate: building membership is server-owned (unlike
     // the local profile above), so it's checked asynchronously and kept
     // out of OnboardingFlow's synchronous DATA_STEPS wizard.
-    content = <JoinBuildingStep idToken={tokens!.id_token} onJoined={setBuilding} />;
-  } else if (showSettings) {
+    content = (
+      <>
+        <JoinBuildingStep idToken={tokens!.id_token} onJoined={setBuilding} />
+        {isAdmin && (
+          <Box sx={{ position: 'fixed', bottom: 24, insetInlineStart: 0, insetInlineEnd: 0, textAlign: 'center' }}>
+            <Button
+              variant="outlined"
+              onClick={() => setView('admin')}
+              sx={{ textTransform: 'none', bgcolor: 'background.paper' }}
+            >
+              {t('admin.openPanel')}
+            </Button>
+          </Box>
+        )}
+      </>
+    );
+  } else if (view === 'settings') {
     content = (
       <Settings
         profile={profile}
         onUpdateProfile={setProfile}
-        onBack={() => setShowSettings(false)}
+        onBack={() => setView('home')}
         onLeaveBuilding={handleLeaveBuilding}
+        onOpenAdmin={isAdmin ? () => setView('admin') : undefined}
+        initialSection={settingsSection}
       />
     );
   } else {
@@ -216,7 +168,11 @@ function App() {
         profile={profile}
         building={building}
         idToken={tokens!.id_token}
-        onViewUserInfo={() => setShowSettings(true)}
+        onOpenSettings={openSettings}
+        adminView={isRealAdmin ? { viewAsResident, onToggle: toggleViewAsResident } : undefined}
+        currentUser={effectiveUser}
+        onBuildingChange={setBuilding}
+        onBuildingRefresh={() => setBuildingReload((n) => n + 1)}
       />
     );
   }

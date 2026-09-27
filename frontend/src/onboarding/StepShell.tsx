@@ -42,7 +42,7 @@ export default function StepShell({
             mb: 2,
             ml: -1,
             transition: 'all 0.2s ease',
-            '&:hover': { bgcolor: 'rgba(58, 90, 64, 0.08)' },
+            '&:hover': { bgcolor: 'action.hover' },
             color: 'primary.main',
           }}
         >

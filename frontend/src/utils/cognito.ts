@@ -53,6 +53,37 @@ export async function exchangeCodeForTokens(code: string): Promise<Tokens> {
   return response.json();
 }
 
+/**
+ * Trades the long-lived refresh token (30 days by default in Cognito) for fresh
+ * id/access tokens, so the user stays signed in across reloads without seeing
+ * the Google login again. Cognito doesn't return a new refresh token here, so
+ * the existing one is carried over.
+ */
+export async function refreshTokens(refreshToken: string): Promise<Tokens> {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    client_id: CLIENT_ID,
+    refresh_token: refreshToken,
+  });
+  const response = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Token refresh failed: ${errorData.error || response.statusText}`);
+  }
+  const fresh: Tokens = await response.json();
+  return { ...fresh, refresh_token: fresh.refresh_token ?? refreshToken };
+}
+
+/** When the stored id/access tokens expire (ms since epoch), or null if none. */
+export function getTokenExpiry(): number | null {
+  const expiry = localStorage.getItem('token_expiry');
+  return expiry ? parseInt(expiry, 10) : null;
+}
+
 export function saveTokens(tokens: Tokens): void {
   localStorage.setItem('auth_tokens', JSON.stringify(tokens));
   localStorage.setItem('token_expiry', String(Date.now() + tokens.expires_in * 1000));
@@ -72,11 +103,8 @@ export function isTokenValid(): boolean {
   const expiry = localStorage.getItem('token_expiry');
   if (!expiry) return false;
 
-  const isExpired = Date.now() >= parseInt(expiry, 10);
-  if (isExpired) {
-    clearTokens();
-    return false;
-  }
+  // Expired tokens are kept: their refresh_token can still renew the session.
+  if (Date.now() >= parseInt(expiry, 10)) return false;
 
   try {
     const tokens = getStoredTokens();

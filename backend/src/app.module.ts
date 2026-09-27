@@ -5,11 +5,13 @@ import { AppService } from './app.service.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UsersModule } from './users/users.module.js';
 import { BuildingsModule } from './buildings/buildings.module.js';
-import { IssuesModule } from './issues/issues.module.js';
+import { MessagesModule } from './messages/messages.module.js';
+import { AdminModule } from './admin/admin.module.js';
+import { DocsModule } from './docs/docs.module.js';
 import { CognitoAuthGuard } from './auth/cognito-auth.guard.js';
 
 @Module({
-  imports: [PrismaModule, UsersModule, BuildingsModule, IssuesModule],
+  imports: [PrismaModule, UsersModule, BuildingsModule, MessagesModule, DocsModule, AdminModule],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: CognitoAuthGuard }],
 })

@@ -1,0 +1,37 @@
+# Dev mode — Docker Compose merges this file automatically, so a plain
+# `docker compose up` gives live reload for both apps:
+#   - frontend: Vite dev server, edits show up in the browser instantly
+#   - backend:  `nest start --watch`, restarts itself on every save
+# Source folders are bind-mounted; node_modules stay inside the container
+# (Linux builds of native deps, not the Windows ones on your disk).
+#
+# Production-like run (compiled backend + nginx frontend), ignoring this file:
+#   docker compose -f docker-compose.yml up -d --build
+#
+# After changing package.json (new dependency), rebuild and refresh node_modules:
+#   docker compose up -d --build -V
+
+services:
+  backend:
+    build:
+      target: build
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run start:dev"
+    environment:
+      # Windows -> container bind mounts don't deliver file-change events; poll instead.
+      TSC_WATCHFILE: DynamicPriorityPolling
+      TSC_WATCHDIRECTORY: DynamicPriorityPolling
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      target: build
+    # Port 80 inside the container keeps the existing 8080:80 mapping (and the
+    # Cognito callback URL on :8080) working unchanged.
+    command: npm run dev -- --host 0.0.0.0 --port 80
+    environment:
+      VITE_USE_POLLING: 'true'
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules

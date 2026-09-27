@@ -1,43 +1,43 @@
 import { useState } from 'react';
-import { IconButton, Menu, MenuItem, Box, Avatar, Stack, Typography, Divider, Chip } from '@mui/material';
+import {
+  IconButton,
+  Menu,
+  MenuItem,
+  Box,
+  Avatar,
+  Stack,
+  Typography,
+  Divider,
+  Chip,
+  ListItemIcon,
+  Switch,
+} from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
-import { LANGUAGE_OPTIONS } from '../onboarding/onboardingData';
-import { LanguageCode } from '../types/language';
 import LogoutIcon from '@mui/icons-material/Logout';
-import CheckIcon from '@mui/icons-material/Check';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 
-export default function UserInfo({ onViewUserInfo }: { onViewUserInfo?: () => void }) {
+interface UserInfoProps {
+  onEditProfile?: () => void;
+  onOpenPreferences?: () => void;
+  /** Present only for real admins: lets them preview the app as a resident. */
+  adminView?: { viewAsResident: boolean; onToggle: () => void };
+}
+
+export default function UserInfo({ onEditProfile, onOpenPreferences, adminView }: UserInfoProps) {
   const { user, logout } = useAuth();
-  const { t, dir, language, setLanguage } = useLanguage();
+  const { t, dir } = useLanguage();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [langAnchorEl, setLangAnchorEl] = useState<null | HTMLElement>(null);
   const isOpen = Boolean(anchorEl);
-  const isLangOpen = Boolean(langAnchorEl);
 
   if (!user) return null;
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    logout();
-    handleClose();
-  };
-
-  const handleViewUserInfo = () => {
-    onViewUserInfo?.();
-    handleClose();
-  };
-
-  const handleLanguagePick = (code: LanguageCode) => {
-    setLanguage(code);
-    setLangAnchorEl(null);
+  const close = () => setAnchorEl(null);
+  const closeThen = (action?: () => void) => () => {
+    action?.();
+    close();
   };
 
   const edgeSide = dir === 'rtl' ? 'left' : 'right';
@@ -45,48 +45,23 @@ export default function UserInfo({ onViewUserInfo }: { onViewUserInfo?: () => vo
   return (
     <Box sx={{ position: 'fixed', top: 16, insetInlineEnd: 16, zIndex: 1000 }}>
       <IconButton
-        onClick={handleOpen}
-        sx={{
-          p: 0,
-          '&:hover': {
-            transform: 'scale(1.05)',
-          },
-        }}
+        onClick={(event) => setAnchorEl(event.currentTarget)}
+        sx={{ p: 0, '&:hover': { transform: 'scale(1.05)' } }}
       >
-        <Avatar
-          src={user.picture}
-          alt={user.name || 'User'}
-          sx={{
-            width: 40,
-            height: 40,
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          }}
-        />
+        <Avatar src={user.picture} alt={user.name || 'User'} sx={{ width: 40, height: 40, boxShadow: 2 }} />
       </IconButton>
 
       <Menu
         anchorEl={anchorEl}
         open={isOpen}
-        onClose={handleClose}
+        onClose={close}
         anchorOrigin={{ vertical: 'bottom', horizontal: edgeSide }}
         transformOrigin={{ vertical: 'top', horizontal: edgeSide }}
-        slotProps={{
-          paper: {
-            sx: {
-              minWidth: 280,
-              mt: 1,
-              borderRadius: 3,
-            },
-          },
-        }}
+        slotProps={{ paper: { sx: { minWidth: 280, mt: 1, borderRadius: 3 } } }}
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Avatar
-              src={user.picture}
-              alt={user.name || 'User'}
-              sx={{ width: 40, height: 40 }}
-            />
+            <Avatar src={user.picture} alt={user.name || 'User'} sx={{ width: 40, height: 40 }} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user.name || 'User'}
@@ -109,47 +84,48 @@ export default function UserInfo({ onViewUserInfo }: { onViewUserInfo?: () => vo
 
         <Divider sx={{ my: 1 }} />
 
-        <MenuItem
-          onClick={(e) => {
-            setLangAnchorEl(e.currentTarget);
-          }}
-        >
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <Typography variant="body2">{t('userMenu.language')}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {LANGUAGE_OPTIONS.find((opt) => opt.code === language)?.nativeLabel}
-            </Typography>
-          </Stack>
-        </MenuItem>
-
-        {onViewUserInfo && (
-          <MenuItem onClick={handleViewUserInfo}>
-            <Typography variant="body2">{t('userMenu.settings')}</Typography>
+        {onEditProfile && (
+          <MenuItem onClick={closeThen(onEditProfile)}>
+            <ListItemIcon>
+              <PersonOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            <Typography variant="body2">{t('userMenu.profile')}</Typography>
           </MenuItem>
         )}
 
-        <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-          <LogoutIcon sx={{ mr: 1, fontSize: 18 }} />
+        {onOpenPreferences && (
+          <MenuItem onClick={closeThen(onOpenPreferences)}>
+            <ListItemIcon>
+              <TuneOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <Typography variant="body2">{t('userMenu.preferences')}</Typography>
+          </MenuItem>
+        )}
+
+        {adminView && (
+          // Stays open on toggle so the admin sees the switch flip.
+          <MenuItem onClick={adminView.onToggle}>
+            <ListItemIcon>
+              <VisibilityOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2">{t('userMenu.viewAsResident')}</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('userMenu.viewAsResidentHint')}
+              </Typography>
+            </Box>
+            <Switch edge="end" size="small" checked={adminView.viewAsResident} tabIndex={-1} />
+          </MenuItem>
+        )}
+
+        <Divider sx={{ my: 1 }} />
+
+        <MenuItem onClick={closeThen(logout)} sx={{ color: 'error.main' }}>
+          <ListItemIcon sx={{ color: 'error.main' }}>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
           <Typography variant="body2">{t('userMenu.signOut')}</Typography>
         </MenuItem>
-      </Menu>
-
-      <Menu
-        anchorEl={langAnchorEl}
-        open={isLangOpen}
-        onClose={() => setLangAnchorEl(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: edgeSide }}
-        transformOrigin={{ vertical: 'top', horizontal: dir === 'rtl' ? 'right' : 'left' }}
-        slotProps={{ paper: { sx: { borderRadius: 3, minWidth: 160 } } }}
-      >
-        {LANGUAGE_OPTIONS.map((opt) => (
-          <MenuItem key={opt.code} onClick={() => handleLanguagePick(opt.code)}>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 2 }}>
-              <Typography variant="body2">{opt.nativeLabel}</Typography>
-              {opt.code === language && <CheckIcon sx={{ fontSize: 16, color: 'primary.main' }} />}
-            </Stack>
-          </MenuItem>
-        ))}
       </Menu>
     </Box>
   );

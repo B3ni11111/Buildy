@@ -4,3 +4,4 @@ dist
 .env.example
 test
 *.spec.ts
+uploads
