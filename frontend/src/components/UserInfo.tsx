@@ -10,23 +10,19 @@ import {
   Divider,
   Chip,
   ListItemIcon,
-  Switch,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 
 interface UserInfoProps {
   onEditProfile?: () => void;
   onOpenPreferences?: () => void;
-  /** Present only for real admins: lets them preview the app as a resident. */
-  adminView?: { viewAsResident: boolean; onToggle: () => void };
 }
 
-export default function UserInfo({ onEditProfile, onOpenPreferences, adminView }: UserInfoProps) {
+export default function UserInfo({ onEditProfile, onOpenPreferences }: UserInfoProps) {
   const { user, logout } = useAuth();
   const { t, dir } = useLanguage();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -99,22 +95,6 @@ export default function UserInfo({ onEditProfile, onOpenPreferences, adminView }
               <TuneOutlinedIcon fontSize="small" />
             </ListItemIcon>
             <Typography variant="body2">{t('userMenu.preferences')}</Typography>
-          </MenuItem>
-        )}
-
-        {adminView && (
-          // Stays open on toggle so the admin sees the switch flip.
-          <MenuItem onClick={adminView.onToggle}>
-            <ListItemIcon>
-              <VisibilityOutlinedIcon fontSize="small" />
-            </ListItemIcon>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2">{t('userMenu.viewAsResident')}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('userMenu.viewAsResidentHint')}
-              </Typography>
-            </Box>
-            <Switch edge="end" size="small" checked={adminView.viewAsResident} tabIndex={-1} />
           </MenuItem>
         )}
 

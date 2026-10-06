@@ -87,8 +87,8 @@ export interface BuildingInput {
   contactLinks?: ContactLinkInput[];
 }
 
-/** Role inside one building, highest first. */
-export const BUILDING_ROLES = ['committee_head', 'committee_member', 'manager', 'resident'] as const;
+/** Role inside one building: management (committee head, management company — same level), then residents. */
+export const BUILDING_ROLES = ['committee_head', 'management_company', 'resident'] as const;
 export type BuildingRole = (typeof BUILDING_ROLES)[number];
 
 export interface Member {

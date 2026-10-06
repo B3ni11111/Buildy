@@ -108,14 +108,10 @@ export type TranslationKey =
   | 'admin.sectionTitle'
   | 'admin.sectionDescription'
   | 'admin.openPanel'
-  | 'admin.title'
   | 'admin.subtitle'
   | 'admin.newBuilding'
   | 'admin.stats'
   | 'admin.noBuildings'
-  | 'admin.backToSettings'
-  | 'admin.viewMessages'
-  | 'admin.messagesDialogTitle'
   | 'admin.editBuilding'
   | 'admin.deleteTitle'
   | 'admin.deleteBody'
@@ -147,11 +143,8 @@ export type TranslationKey =
   | 'wizard.review.create'
   | 'wizard.done'
   | 'role.committee_head'
-  | 'role.committee_member'
-  | 'role.manager'
   | 'role.resident'
   | 'members.title'
-  | 'members.committee'
   | 'members.residents'
   | 'members.count'
   | 'members.unnamed'
@@ -186,7 +179,6 @@ export type TranslationKey =
   | 'admin.addContact'
   | 'admin.contactLinkLabel'
   | 'admin.contactError'
-  | 'admin.members'
   | 'wizard.contacts.title'
   | 'wizard.contacts.subtitle'
   | 'settings.profileTitle'
@@ -209,6 +201,19 @@ export type TranslationKey =
   | 'docs.fullscreen'
   | 'docs.exitFullscreen'
   | 'docs.close'
+  | 'adminFab.tooltip'
+  | 'adminFab.openConsole'
+  | 'admin.consoleTitle'
+  | 'admin.searchBuildings'
+  | 'admin.selectBuilding'
+  | 'admin.noMatches'
+  | 'admin.backToApp'
+  | 'admin.tabOverview'
+  | 'admin.tabMembers'
+  | 'admin.tabMessages'
+  | 'admin.tabDocuments'
+  | 'role.management_company'
+  | 'members.management'
   | 'userMenu.emailVerified'
   | 'userMenu.signOut';
 
@@ -326,14 +331,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.sectionTitle': 'Admin',
     'admin.sectionDescription': 'Create, edit and delete buildings and their messages.',
     'admin.openPanel': 'Open admin panel',
-    'admin.title': 'Buildings',
     'admin.subtitle': 'Everything you can manage as a buildy admin.',
     'admin.newBuilding': 'New building',
     'admin.stats': '{{members}} residents · {{messages}} messages · {{docs}} docs',
     'admin.noBuildings': 'No buildings yet.',
-    'admin.backToSettings': 'Back to settings',
-    'admin.viewMessages': 'Messages',
-    'admin.messagesDialogTitle': 'Messages · {{name}}',
     'admin.editBuilding': 'Edit building',
     'admin.deleteTitle': 'Delete {{name}}?',
     'admin.deleteBody': "This permanently deletes the building together with its residents' memberships, messages and documents.",
@@ -365,11 +366,8 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.review.create': 'Create building',
     'wizard.done': 'Building created',
     'role.committee_head': 'Committee head',
-    'role.committee_member': 'Committee member',
-    'role.manager': 'Building manager',
     'role.resident': 'Resident',
     'members.title': 'Members',
-    'members.committee': 'Committee',
     'members.residents': 'Residents',
     'members.count': '{{count}} members',
     'members.unnamed': 'Unnamed resident',
@@ -404,7 +402,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.addContact': 'Add',
     'admin.contactLinkLabel': 'Link, number or email',
     'admin.contactError': 'Check the link: WhatsApp needs an https:// link, phone a number, email an address.',
-    'admin.members': 'Members',
     'wizard.contacts.title': 'How can residents reach the committee?',
     'wizard.contacts.subtitle': 'Add a WhatsApp group, phone or email. You can add more later.',
     'settings.profileTitle': 'Profile',
@@ -427,6 +424,19 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'docs.fullscreen': 'Full screen',
     'docs.exitFullscreen': 'Exit full screen',
     'docs.close': 'Close',
+    'adminFab.tooltip': 'Admin tools',
+    'adminFab.openConsole': 'Open admin console',
+    'admin.consoleTitle': 'Admin console',
+    'admin.searchBuildings': 'Search buildings',
+    'admin.selectBuilding': 'Building',
+    'admin.noMatches': 'No buildings match.',
+    'admin.backToApp': 'Back to the app',
+    'admin.tabOverview': 'Overview',
+    'admin.tabMembers': 'Members',
+    'admin.tabMessages': 'Messages',
+    'admin.tabDocuments': 'Documents',
+    'role.management_company': 'Management company',
+    'members.management': 'Building management',
     'userMenu.emailVerified': 'Email verified',
     'userMenu.signOut': 'Sign Out',
   },
@@ -539,14 +549,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.sectionTitle': 'ניהול',
     'admin.sectionDescription': 'יצירה, עריכה ומחיקה של בניינים וההודעות שלהם.',
     'admin.openPanel': 'פתיחת לוח הניהול',
-    'admin.title': 'בניינים',
     'admin.subtitle': 'כל מה שאפשר לנהל כמנהל/ת buildy.',
     'admin.newBuilding': 'בניין חדש',
     'admin.stats': '{{members}} דיירים · {{messages}} הודעות · {{docs}} מסמכים',
     'admin.noBuildings': 'אין בניינים עדיין.',
-    'admin.backToSettings': 'חזרה להגדרות',
-    'admin.viewMessages': 'הודעות',
-    'admin.messagesDialogTitle': 'הודעות · {{name}}',
     'admin.editBuilding': 'עריכת בניין',
     'admin.deleteTitle': 'למחוק את {{name}}?',
     'admin.deleteBody': 'פעולה זו מוחקת לצמיתות את הבניין יחד עם שיוך הדיירים, ההודעות והמסמכים שלו.',
@@ -578,11 +584,8 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.review.create': 'יצירת בניין',
     'wizard.done': 'הבניין נוצר',
     'role.committee_head': 'יו"ר הוועד',
-    'role.committee_member': 'חבר/ת ועד',
-    'role.manager': 'מנהל/ת הבניין',
     'role.resident': 'דייר/ת',
     'members.title': 'דיירים',
-    'members.committee': 'ועד הבית',
     'members.residents': 'דיירים',
     'members.count': '{{count}} דיירים',
     'members.unnamed': 'דייר/ת ללא שם',
@@ -617,7 +620,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.addContact': 'הוספה',
     'admin.contactLinkLabel': 'קישור, מספר או אימייל',
     'admin.contactError': 'בדקו את הקישור: לוואטסאפ צריך קישור https://, לטלפון מספר, ולאימייל כתובת.',
-    'admin.members': 'דיירים',
     'wizard.contacts.title': 'איך הדיירים יכולים לפנות לוועד?',
     'wizard.contacts.subtitle': 'הוסיפו קבוצת וואטסאפ, טלפון או אימייל. אפשר להוסיף עוד מאוחר יותר.',
     'settings.profileTitle': 'פרופיל',
@@ -640,6 +642,19 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'docs.fullscreen': 'מסך מלא',
     'docs.exitFullscreen': 'יציאה ממסך מלא',
     'docs.close': 'סגירה',
+    'adminFab.tooltip': 'כלי ניהול',
+    'adminFab.openConsole': 'פתיחת מסוף הניהול',
+    'admin.consoleTitle': 'מסוף ניהול',
+    'admin.searchBuildings': 'חיפוש בניינים',
+    'admin.selectBuilding': 'בניין',
+    'admin.noMatches': 'לא נמצאו בניינים תואמים.',
+    'admin.backToApp': 'חזרה לאפליקציה',
+    'admin.tabOverview': 'סקירה',
+    'admin.tabMembers': 'דיירים',
+    'admin.tabMessages': 'הודעות',
+    'admin.tabDocuments': 'מסמכים',
+    'role.management_company': 'חברת ניהול',
+    'members.management': 'הנהלת הבניין',
     'userMenu.emailVerified': 'אימייל מאומת',
     'userMenu.signOut': 'התנתקות',
   },
@@ -752,14 +767,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.sectionTitle': 'الإدارة',
     'admin.sectionDescription': 'إنشاء المباني ورسائلها وتعديلها وحذفها.',
     'admin.openPanel': 'فتح لوحة الإدارة',
-    'admin.title': 'المباني',
     'admin.subtitle': 'كل ما يمكنك إدارته كمسؤول في buildy.',
     'admin.newBuilding': 'مبنى جديد',
     'admin.stats': '{{members}} ساكن · {{messages}} رسالة · {{docs}} مستند',
     'admin.noBuildings': 'لا توجد مبانٍ بعد.',
-    'admin.backToSettings': 'العودة إلى الإعدادات',
-    'admin.viewMessages': 'الرسائل',
-    'admin.messagesDialogTitle': 'الرسائل · {{name}}',
     'admin.editBuilding': 'تعديل المبنى',
     'admin.deleteTitle': 'حذف {{name}}؟',
     'admin.deleteBody': 'سيؤدي هذا إلى حذف المبنى نهائيًا مع عضويات سكانه ورسائله ومستنداته.',
@@ -791,11 +802,8 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.review.create': 'إنشاء المبنى',
     'wizard.done': 'تم إنشاء المبنى',
     'role.committee_head': 'رئيس اللجنة',
-    'role.committee_member': 'عضو اللجنة',
-    'role.manager': 'مدير المبنى',
     'role.resident': 'ساكن',
     'members.title': 'السكان',
-    'members.committee': 'اللجنة',
     'members.residents': 'السكان',
     'members.count': '{{count}} ساكن',
     'members.unnamed': 'ساكن بلا اسم',
@@ -830,7 +838,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.addContact': 'إضافة',
     'admin.contactLinkLabel': 'رابط أو رقم أو بريد إلكتروني',
     'admin.contactError': 'تحقق من الرابط: واتساب يحتاج رابط https://، والهاتف رقمًا، والبريد عنوانًا.',
-    'admin.members': 'السكان',
     'wizard.contacts.title': 'كيف يمكن للسكان التواصل مع اللجنة؟',
     'wizard.contacts.subtitle': 'أضف مجموعة واتساب أو هاتفًا أو بريدًا إلكترونيًا. يمكنك إضافة المزيد لاحقًا.',
     'settings.profileTitle': 'الملف الشخصي',
@@ -853,6 +860,19 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'docs.fullscreen': 'ملء الشاشة',
     'docs.exitFullscreen': 'الخروج من ملء الشاشة',
     'docs.close': 'إغلاق',
+    'adminFab.tooltip': 'أدوات الإدارة',
+    'adminFab.openConsole': 'فتح وحدة الإدارة',
+    'admin.consoleTitle': 'وحدة الإدارة',
+    'admin.searchBuildings': 'البحث عن مبانٍ',
+    'admin.selectBuilding': 'المبنى',
+    'admin.noMatches': 'لا توجد مبانٍ مطابقة.',
+    'admin.backToApp': 'العودة إلى التطبيق',
+    'admin.tabOverview': 'نظرة عامة',
+    'admin.tabMembers': 'السكان',
+    'admin.tabMessages': 'الرسائل',
+    'admin.tabDocuments': 'المستندات',
+    'role.management_company': 'شركة إدارة',
+    'members.management': 'إدارة المبنى',
     'userMenu.emailVerified': 'البريد الإلكتروني موثّق',
     'userMenu.signOut': 'تسجيل الخروج',
   },
@@ -968,14 +988,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.sectionTitle': 'Администрирование',
     'admin.sectionDescription': 'Создание, редактирование и удаление домов и их сообщений.',
     'admin.openPanel': 'Открыть панель администратора',
-    'admin.title': 'Дома',
     'admin.subtitle': 'Всё, чем вы можете управлять как администратор buildy.',
     'admin.newBuilding': 'Новый дом',
     'admin.stats': 'Жильцов: {{members}} · сообщений: {{messages}} · документов: {{docs}}',
     'admin.noBuildings': 'Домов пока нет.',
-    'admin.backToSettings': 'Назад к настройкам',
-    'admin.viewMessages': 'Сообщения',
-    'admin.messagesDialogTitle': 'Сообщения · {{name}}',
     'admin.editBuilding': 'Редактировать дом',
     'admin.deleteTitle': 'Удалить {{name}}?',
     'admin.deleteBody': 'Дом будет удалён навсегда вместе с привязками жильцов, сообщениями и документами.',
@@ -1007,11 +1023,8 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.review.create': 'Создать дом',
     'wizard.done': 'Дом создан',
     'role.committee_head': 'Председатель комитета',
-    'role.committee_member': 'Член комитета',
-    'role.manager': 'Управляющий домом',
     'role.resident': 'Жилец',
     'members.title': 'Жильцы',
-    'members.committee': 'Домовой комитет',
     'members.residents': 'Жильцы',
     'members.count': 'Жильцов: {{count}}',
     'members.unnamed': 'Жилец без имени',
@@ -1046,7 +1059,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.addContact': 'Добавить',
     'admin.contactLinkLabel': 'Ссылка, номер или email',
     'admin.contactError': 'Проверьте ссылку: для WhatsApp нужна ссылка https://, для телефона — номер, для почты — адрес.',
-    'admin.members': 'Жильцы',
     'wizard.contacts.title': 'Как жильцы могут связаться с комитетом?',
     'wizard.contacts.subtitle': 'Добавьте группу WhatsApp, телефон или email. Позже можно добавить ещё.',
     'settings.profileTitle': 'Профиль',
@@ -1069,6 +1081,19 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'docs.fullscreen': 'Во весь экран',
     'docs.exitFullscreen': 'Выйти из полноэкранного режима',
     'docs.close': 'Закрыть',
+    'adminFab.tooltip': 'Инструменты администратора',
+    'adminFab.openConsole': 'Открыть консоль администратора',
+    'admin.consoleTitle': 'Консоль администратора',
+    'admin.searchBuildings': 'Поиск домов',
+    'admin.selectBuilding': 'Дом',
+    'admin.noMatches': 'Нет подходящих домов.',
+    'admin.backToApp': 'Назад в приложение',
+    'admin.tabOverview': 'Обзор',
+    'admin.tabMembers': 'Жильцы',
+    'admin.tabMessages': 'Сообщения',
+    'admin.tabDocuments': 'Документы',
+    'role.management_company': 'Управляющая компания',
+    'members.management': 'Управление домом',
     'userMenu.emailVerified': 'Email подтверждён',
     'userMenu.signOut': 'Выйти',
   },
@@ -1185,14 +1210,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.sectionTitle': 'Administration',
     'admin.sectionDescription': 'Créer, modifier et supprimer des immeubles et leurs messages.',
     'admin.openPanel': "Ouvrir le panneau d'administration",
-    'admin.title': 'Immeubles',
     'admin.subtitle': 'Tout ce que vous pouvez gérer en tant qu’administrateur buildy.',
     'admin.newBuilding': 'Nouvel immeuble',
     'admin.stats': '{{members}} résidents · {{messages}} messages · {{docs}} documents',
     'admin.noBuildings': "Aucun immeuble pour l'instant.",
-    'admin.backToSettings': 'Retour aux paramètres',
-    'admin.viewMessages': 'Messages',
-    'admin.messagesDialogTitle': 'Messages · {{name}}',
     'admin.editBuilding': "Modifier l'immeuble",
     'admin.deleteTitle': 'Supprimer {{name}} ?',
     'admin.deleteBody': "Cela supprime définitivement l'immeuble ainsi que les adhésions des résidents, les messages et les documents.",
@@ -1224,11 +1245,8 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.review.create': "Créer l'immeuble",
     'wizard.done': 'Immeuble créé',
     'role.committee_head': 'Président du conseil',
-    'role.committee_member': 'Membre du conseil',
-    'role.manager': "Gestionnaire de l'immeuble",
     'role.resident': 'Résident',
     'members.title': 'Résidents',
-    'members.committee': 'Conseil syndical',
     'members.residents': 'Résidents',
     'members.count': '{{count}} résidents',
     'members.unnamed': 'Résident sans nom',
@@ -1263,7 +1281,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.addContact': 'Ajouter',
     'admin.contactLinkLabel': 'Lien, numéro ou e-mail',
     'admin.contactError': 'Vérifiez le lien : WhatsApp exige un lien https://, le téléphone un numéro, l’e-mail une adresse.',
-    'admin.members': 'Résidents',
     'wizard.contacts.title': 'Comment les résidents peuvent-ils joindre le conseil ?',
     'wizard.contacts.subtitle': 'Ajoutez un groupe WhatsApp, un téléphone ou un e-mail. Vous pourrez en ajouter plus tard.',
     'settings.profileTitle': 'Profil',
@@ -1286,6 +1303,19 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'docs.fullscreen': 'Plein écran',
     'docs.exitFullscreen': 'Quitter le plein écran',
     'docs.close': 'Fermer',
+    'adminFab.tooltip': "Outils d'administration",
+    'adminFab.openConsole': "Ouvrir la console d'administration",
+    'admin.consoleTitle': "Console d'administration",
+    'admin.searchBuildings': 'Rechercher un immeuble',
+    'admin.selectBuilding': 'Immeuble',
+    'admin.noMatches': 'Aucun immeuble ne correspond.',
+    'admin.backToApp': "Retour à l'application",
+    'admin.tabOverview': 'Aperçu',
+    'admin.tabMembers': 'Résidents',
+    'admin.tabMessages': 'Messages',
+    'admin.tabDocuments': 'Documents',
+    'role.management_company': 'Société de gestion',
+    'members.management': "Gestion de l'immeuble",
     'userMenu.emailVerified': 'E-mail vérifié',
     'userMenu.signOut': 'Se déconnecter',
   },
@@ -1401,14 +1431,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.sectionTitle': 'Administración',
     'admin.sectionDescription': 'Crea, edita y elimina edificios y sus mensajes.',
     'admin.openPanel': 'Abrir panel de administración',
-    'admin.title': 'Edificios',
     'admin.subtitle': 'Todo lo que puedes gestionar como administrador de buildy.',
     'admin.newBuilding': 'Nuevo edificio',
     'admin.stats': '{{members}} residentes · {{messages}} mensajes · {{docs}} documentos',
     'admin.noBuildings': 'Todavía no hay edificios.',
-    'admin.backToSettings': 'Volver a ajustes',
-    'admin.viewMessages': 'Mensajes',
-    'admin.messagesDialogTitle': 'Mensajes · {{name}}',
     'admin.editBuilding': 'Editar edificio',
     'admin.deleteTitle': '¿Eliminar {{name}}?',
     'admin.deleteBody': 'Esto elimina permanentemente el edificio junto con las membresías de sus residentes, mensajes y documentos.',
@@ -1440,11 +1466,8 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.review.create': 'Crear edificio',
     'wizard.done': 'Edificio creado',
     'role.committee_head': 'Presidente de la comunidad',
-    'role.committee_member': 'Miembro de la junta',
-    'role.manager': 'Administrador del edificio',
     'role.resident': 'Residente',
     'members.title': 'Residentes',
-    'members.committee': 'Junta de la comunidad',
     'members.residents': 'Residentes',
     'members.count': '{{count}} residentes',
     'members.unnamed': 'Residente sin nombre',
@@ -1479,7 +1502,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.addContact': 'Añadir',
     'admin.contactLinkLabel': 'Enlace, número o correo',
     'admin.contactError': 'Revisa el enlace: WhatsApp necesita un enlace https://, el teléfono un número y el correo una dirección.',
-    'admin.members': 'Residentes',
     'wizard.contacts.title': '¿Cómo pueden los residentes contactar con la junta?',
     'wizard.contacts.subtitle': 'Añade un grupo de WhatsApp, un teléfono o un correo. Puedes añadir más después.',
     'settings.profileTitle': 'Perfil',
@@ -1502,6 +1524,19 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'docs.fullscreen': 'Pantalla completa',
     'docs.exitFullscreen': 'Salir de pantalla completa',
     'docs.close': 'Cerrar',
+    'adminFab.tooltip': 'Herramientas de administración',
+    'adminFab.openConsole': 'Abrir la consola de administración',
+    'admin.consoleTitle': 'Consola de administración',
+    'admin.searchBuildings': 'Buscar edificios',
+    'admin.selectBuilding': 'Edificio',
+    'admin.noMatches': 'Ningún edificio coincide.',
+    'admin.backToApp': 'Volver a la app',
+    'admin.tabOverview': 'Resumen',
+    'admin.tabMembers': 'Residentes',
+    'admin.tabMessages': 'Mensajes',
+    'admin.tabDocuments': 'Documentos',
+    'role.management_company': 'Empresa administradora',
+    'members.management': 'Administración del edificio',
     'userMenu.emailVerified': 'Correo verificado',
     'userMenu.signOut': 'Cerrar sesión',
   },

@@ -9,11 +9,12 @@ datasource db {
 // Based on the drawSQL diagram (2026-09-28). DB columns are snake_case via
 // @map so raw SQL never needs quoted identifiers; Prisma fields are camelCase.
 
-// Role inside one building. Global super-users are users.is_admin instead.
+// Role inside one building (global super-users are users.is_admin instead).
+// committee_head and management_company sit on the same level, above residents.
+// There is no "committee member": every resident is a member of the building.
 enum UserRole {
   committee_head
-  committee_member
-  manager
+  management_company
   resident
 
   @@map("user_role")

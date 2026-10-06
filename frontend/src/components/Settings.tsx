@@ -150,7 +150,7 @@ export default function Settings({
   const selectedUserType = USER_TYPE_OPTIONS.find((opt) => opt.value === profile.userType);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 5 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pt: 5, pb: 12 }}>
       <Container maxWidth="sm">
         <Button startIcon={<BackIcon />} onClick={onBack} sx={{ textTransform: 'none', mb: 2 }}>
           {t('settings.backToHome')}

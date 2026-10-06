@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Container,
   Dialog,
@@ -13,10 +14,14 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemText,
   Stack,
+  Tab,
+  Tabs,
   TextField,
-  Tooltip,
   Typography,
   createFilterOptions,
 } from '@mui/material';
@@ -25,17 +30,46 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
+import SearchIcon from '@mui/icons-material/Search';
+import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
 import { MembersList } from '../components/MembersCard';
+import MessagesCard from '../components/MessagesCard';
+import DocumentsCard from '../components/DocumentsCard';
 import { useMembers } from '../hooks/useMembers';
 import ContactLinksEditor from './ContactLinksEditor';
-import MessagesCard from '../components/MessagesCard';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ApiError, api } from '../utils/api';
-import { AdminBuilding, City, ContactLink, CurrentUser, MessageType } from '../types/building';
+import { AdminBuilding, City, ContactLink, ContactType, CurrentUser, MessageType } from '../types/building';
 
 const filterCities = createFilterOptions<City>({ limit: 50 });
+const SELECTED_KEY = 'buildy_admin_building';
+const TABS = ['overview', 'members', 'messages', 'docs'] as const;
+type ConsoleTab = (typeof TABS)[number];
+
+const CONTACT_ICON: Record<ContactType, typeof WhatsAppIcon> = {
+  whatsapp: WhatsAppIcon,
+  phone: PhoneOutlinedIcon,
+  email: MailOutlinedIcon,
+};
+
+function readSelected(): string | null {
+  try {
+    return localStorage.getItem(SELECTED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function matches(building: AdminBuilding, query: string) {
+  const q = query.trim().toLowerCase();
+  return !q || [building.name, building.address, building.city.name].some((s) => s.toLowerCase().includes(q));
+}
 
 interface AdminPanelProps {
   idToken: string;
@@ -46,19 +80,23 @@ interface AdminPanelProps {
   onBuildingsChanged: () => void;
 }
 
+/**
+ * Admin console: pick a building on the side (search to jump), then manage it
+ * in tabs — overview, members, messages, documents.
+ */
 export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onBack, onBuildingsChanged }: AdminPanelProps) {
   const { t, dir } = useLanguage();
   const BackIcon = dir === 'rtl' ? ArrowForwardIcon : ArrowBackIcon;
   const [buildings, setBuildings] = useState<AdminBuilding[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(readSelected);
+  const [tab, setTab] = useState<ConsoleTab>('overview');
 
   const [editing, setEditing] = useState<AdminBuilding | null>(null);
   const [deleting, setDeleting] = useState<AdminBuilding | null>(null);
-  const [viewingMessages, setViewingMessages] = useState<AdminBuilding | null>(null);
-  const [viewingMembers, setViewingMembers] = useState<AdminBuilding | null>(null);
-  const [composeType, setComposeType] = useState<MessageType | null>(null);
-  // Bumped to refetch the list (e.g. message counts after the messages dialog closes).
+  // Bumped to refetch the list, e.g. so counts stay current after work in a tab.
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -89,14 +127,99 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
     };
   }, [idToken]);
 
+  // Fall back to the first building when nothing (or a deleted one) is selected.
+  const selected = useMemo(
+    () => buildings?.find((b) => b.id === selectedId) ?? buildings?.[0] ?? null,
+    [buildings, selectedId],
+  );
+  const filtered = (buildings ?? []).filter((b) => matches(b, query));
+
+  const select = (id: string) => {
+    setSelectedId(id);
+    setReloadKey((k) => k + 1);
+    try {
+      localStorage.setItem(SELECTED_KEY, id);
+    } catch {
+      // not remembered — fine
+    }
+  };
+
+  const changeTab = (next: ConsoleTab) => {
+    setTab(next);
+    setReloadKey((k) => k + 1);
+  };
+
   const replaceBuilding = (updated: AdminBuilding) =>
     setBuildings((prev) => (prev ?? []).map((b) => (b.id === updated.id ? updated : b)));
 
+  const buildingList = (
+    <Card variant="outlined" sx={{ borderRadius: 4, position: { md: 'sticky' }, top: { md: 24 } }}>
+      <Box sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder={t('admin.searchBuildings')}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && filtered[0]) select(filtered[0].id);
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </Box>
+      <List dense disablePadding sx={{ maxHeight: { md: 'calc(100vh - 220px)' }, overflow: 'auto' }}>
+        {filtered.map((building) => (
+          <ListItemButton
+            key={building.id}
+            selected={building.id === selected?.id}
+            onClick={() => select(building.id)}
+            sx={{ py: 1.25 }}
+          >
+            <ListItemText
+              primary={building.name}
+              secondary={
+                <Stack component="span" direction="row" sx={{ alignItems: 'center', gap: 0.75 }}>
+                  <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                    {building.city.name}
+                  </Box>
+                  {[
+                    { Icon: PeopleOutlinedIcon, value: building._count.members },
+                    { Icon: ForumOutlinedIcon, value: building._count.messages },
+                    { Icon: DescriptionOutlinedIcon, value: building._count.docs },
+                  ].map(({ Icon, value }, i) => (
+                    <Stack key={i} component="span" direction="row" sx={{ alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
+                      <Icon sx={{ fontSize: 14 }} />
+                      {value}
+                    </Stack>
+                  ))}
+                </Stack>
+              }
+              slotProps={{ primary: { sx: { fontWeight: 500 }, noWrap: true } }}
+            />
+          </ListItemButton>
+        ))}
+        {buildings && filtered.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+            {t('admin.noMatches')}
+          </Typography>
+        )}
+      </List>
+    </Card>
+  );
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 5 }}>
-      <Container maxWidth="md">
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4, pb: 12 }}>
+      <Container maxWidth="lg">
         <Button startIcon={<BackIcon />} onClick={onBack} sx={{ textTransform: 'none', mb: 2 }}>
-          {t('admin.backToSettings')}
+          {t('admin.backToApp')}
         </Button>
 
         <Stack
@@ -108,7 +231,7 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
               variant="h4"
               sx={{ fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif', fontWeight: 600 }}
             >
-              {t('admin.title')}
+              {t('admin.consoleTitle')}
             </Typography>
             <Typography color="text.secondary">{t('admin.subtitle')}</Typography>
           </Box>
@@ -130,56 +253,93 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
         )}
         {buildings && buildings.length === 0 && <Typography color="text.secondary">{t('admin.noBuildings')}</Typography>}
 
-        <Stack spacing={2}>
-          {(buildings ?? []).map((building) => (
-            <Card key={building.id} variant="outlined" sx={{ borderRadius: 4 }}>
-              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                <Stack direction="row" sx={{ alignItems: 'flex-start', gap: 2 }}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{building.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {building.address}, {building.city.name}
-                    </Typography>
-                    {building.contactLinks.length === 0 && (
-                      <Typography variant="caption" color="warning.main" sx={{ display: 'block' }}>
-                        {t('dashboard.noContacts')}
+        {buildings && selected && (
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ alignItems: 'flex-start' }}>
+            {/* Phones: a search-as-you-type picker. Desktop: the sticky list. */}
+            <Box sx={{ display: { xs: 'block', md: 'none' }, width: '100%' }}>
+              <Autocomplete
+                options={buildings}
+                value={selected}
+                onChange={(_e, value) => value && select(value.id)}
+                getOptionLabel={(b) => `${b.name} — ${b.city.name}`}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                disableClearable
+                renderInput={(params) => <TextField {...params} label={t('admin.selectBuilding')} />}
+              />
+            </Box>
+            <Box sx={{ display: { xs: 'none', md: 'block' }, width: 280, flexShrink: 0 }}>{buildingList}</Box>
+
+            <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+              <Card variant="outlined" sx={{ borderRadius: 4, mb: 2 }}>
+                <CardContent sx={{ p: 2.5, '&:last-child': { pb: 1 } }}>
+                  <Stack direction="row" sx={{ alignItems: 'flex-start', gap: 2 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }} noWrap>
+                        {selected.name}
                       </Typography>
-                    )}
-                    <Typography variant="caption" color="text.secondary">
-                      {t('admin.stats', {
-                        members: building._count.members,
-                        messages: building._count.messages,
-                        docs: building._count.docs,
-                      })}
-                    </Typography>
-                  </Box>
-                  <Stack direction="row">
-                    <Tooltip title={t('admin.members')}>
-                      <IconButton onClick={() => setViewingMembers(building)}>
-                        <GroupsOutlinedIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('admin.viewMessages')}>
-                      <IconButton onClick={() => setViewingMessages(building)}>
-                        <ForumOutlinedIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('admin.editBuilding')}>
-                      <IconButton onClick={() => setEditing(building)}>
-                        <EditOutlinedIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t('common.delete')}>
-                      <IconButton onClick={() => setDeleting(building)} sx={{ color: 'error.main' }}>
-                        <DeleteOutlineIcon />
-                      </IconButton>
-                    </Tooltip>
+                      <Typography variant="body2" color="text.secondary">
+                        {selected.address}, {selected.city.name}
+                      </Typography>
+                    </Box>
+                    <Button
+                      size="small"
+                      startIcon={<EditOutlinedIcon />}
+                      onClick={() => setEditing(selected)}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      {t('admin.editBuilding')}
+                    </Button>
+                    <Button
+                      size="small"
+                      color="error"
+                      startIcon={<DeleteOutlineIcon />}
+                      onClick={() => setDeleting(selected)}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      {t('common.delete')}
+                    </Button>
                   </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
-        </Stack>
+                  <Tabs
+                    value={tab}
+                    onChange={(_e, value: ConsoleTab) => changeTab(value)}
+                    variant="scrollable"
+                    allowScrollButtonsMobile
+                    sx={{ mt: 1 }}
+                  >
+                    <Tab value="overview" label={t('admin.tabOverview')} sx={{ textTransform: 'none' }} />
+                    <Tab
+                      value="members"
+                      label={`${t('admin.tabMembers')} (${selected._count.members})`}
+                      sx={{ textTransform: 'none' }}
+                    />
+                    <Tab
+                      value="messages"
+                      label={`${t('admin.tabMessages')} (${selected._count.messages})`}
+                      sx={{ textTransform: 'none' }}
+                    />
+                    <Tab
+                      value="docs"
+                      label={`${t('admin.tabDocuments')} (${selected._count.docs})`}
+                      sx={{ textTransform: 'none' }}
+                    />
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+              {/* key= remounts tab content per building, so each fetches its own data. */}
+              <Box key={`${selected.id}-${tab}`}>
+                {tab === 'overview' && <OverviewTab building={selected} onEdit={() => setEditing(selected)} />}
+                {tab === 'members' && (
+                  <MembersTab building={selected} idToken={idToken} currentUser={currentUser} onChanged={onBuildingsChanged} />
+                )}
+                {tab === 'messages' && (
+                  <MessagesTab buildingId={selected.id} idToken={idToken} currentUser={currentUser} />
+                )}
+                {tab === 'docs' && <DocsTab buildingId={selected.id} idToken={idToken} currentUser={currentUser} />}
+              </Box>
+            </Box>
+          </Stack>
+        )}
       </Container>
 
       {editing && (
@@ -214,83 +374,134 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
           }}
         />
       )}
-
-      {viewingMembers && (
-        <MembersDialog
-          key={viewingMembers.id}
-          building={viewingMembers}
-          idToken={idToken}
-          currentUser={currentUser}
-          onClose={() => {
-            setViewingMembers(null);
-            setReloadKey((k) => k + 1);
-            onBuildingsChanged();
-          }}
-        />
-      )}
-
-      <Dialog
-        open={viewingMessages !== null}
-        onClose={() => {
-          setViewingMessages(null);
-          setComposeType(null);
-          setReloadKey((k) => k + 1);
-        }}
-        maxWidth="sm"
-        fullWidth
-        slotProps={{ paper: { sx: { borderRadius: 4, bgcolor: 'background.default' } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>
-          {viewingMessages && t('admin.messagesDialogTitle', { name: viewingMessages.name })}
-        </DialogTitle>
-        <DialogContent>
-          {viewingMessages && (
-            <MessagesCard
-              buildingId={viewingMessages.id}
-              idToken={idToken}
-              composeType={composeType}
-              onComposeTypeChange={setComposeType}
-              currentUser={currentUser}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 }
 
-function MembersDialog({
+function OverviewTab({ building, onEdit }: { building: AdminBuilding; onEdit: () => void }) {
+  const { t } = useLanguage();
+  const stats = [
+    { label: t('admin.tabMembers'), value: building._count.members },
+    { label: t('admin.tabMessages'), value: building._count.messages },
+    { label: t('admin.tabDocuments'), value: building._count.docs },
+  ];
+  return (
+    <Stack spacing={2}>
+      <Stack direction="row" spacing={2}>
+        {stats.map(({ label, value }) => (
+          <Card key={label} variant="outlined" sx={{ borderRadius: 4, flex: 1 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                {value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {label}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
+      </Stack>
+      <Card variant="outlined" sx={{ borderRadius: 4 }}>
+        <CardContent sx={{ p: 2.5 }}>
+          <Stack spacing={1.5}>
+            {building.description && <Typography variant="body2">{building.description}</Typography>}
+            {building.entryCode && (
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                <VpnKeyOutlinedIcon fontSize="small" color="action" />
+                <Typography variant="body2">
+                  {t('dashboard.entryCode')}: <strong dir="ltr">{building.entryCode}</strong>
+                </Typography>
+              </Stack>
+            )}
+            <Typography variant="caption" color="text.secondary">
+              {t('admin.contactsTitle')}
+            </Typography>
+            {building.contactLinks.length > 0 ? (
+              <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+                {building.contactLinks.map((contact) => {
+                  const Icon = CONTACT_ICON[contact.type];
+                  return (
+                    <Chip key={contact.id} icon={<Icon />} label={contact.link} variant="outlined" sx={{ direction: 'ltr' }} />
+                  );
+                })}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="warning.main">
+                {t('dashboard.noContacts')}
+              </Typography>
+            )}
+            <Button
+              size="small"
+              startIcon={<EditOutlinedIcon />}
+              onClick={onEdit}
+              sx={{ textTransform: 'none', alignSelf: 'flex-start' }}
+            >
+              {t('admin.editBuilding')}
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Stack>
+  );
+}
+
+function MembersTab({
   building,
   idToken,
   currentUser,
-  onClose,
+  onChanged,
 }: {
   building: AdminBuilding;
   idToken: string;
   currentUser: CurrentUser;
-  onClose: () => void;
+  onChanged: () => void;
 }) {
-  const { t } = useLanguage();
   const { members, reload } = useMembers(idToken, building.id);
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
-      <DialogTitle sx={{ fontWeight: 700 }}>
-        {t('admin.members')} · {building.name}
-      </DialogTitle>
-      <DialogContent>
+    <Card variant="outlined" sx={{ borderRadius: 4 }}>
+      <CardContent sx={{ p: 2.5 }}>
         {members ? (
           <MembersList
             buildingId={building.id}
             idToken={idToken}
             currentUser={currentUser}
             members={members}
-            onChanged={reload}
+            onChanged={() => {
+              reload();
+              onChanged();
+            }}
           />
         ) : (
           <CircularProgress size={24} />
         )}
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MessagesTab({ buildingId, idToken, currentUser }: { buildingId: string; idToken: string; currentUser: CurrentUser }) {
+  const [composeType, setComposeType] = useState<MessageType | null>(null);
+  return (
+    <MessagesCard
+      buildingId={buildingId}
+      idToken={idToken}
+      composeType={composeType}
+      onComposeTypeChange={setComposeType}
+      currentUser={currentUser}
+    />
+  );
+}
+
+function DocsTab({ buildingId, idToken, currentUser }: { buildingId: string; idToken: string; currentUser: CurrentUser }) {
+  const [uploadOpen, setUploadOpen] = useState(false);
+  return (
+    <DocumentsCard
+      buildingId={buildingId}
+      idToken={idToken}
+      currentUser={currentUser}
+      uploadOpen={uploadOpen}
+      onUploadOpenChange={setUploadOpen}
+    />
   );
 }
 

@@ -8,6 +8,7 @@ import OnboardingFlow from './onboarding/OnboardingFlow';
 import JoinBuildingStep from './onboarding/JoinBuildingStep';
 import AdminPanel from './admin/AdminPanel';
 import CreateBuildingWizard from './admin/CreateBuildingWizard';
+import AdminFab from './admin/AdminFab';
 import { useAuth } from './context/AuthContext';
 import { useLanguage } from './i18n/LanguageContext';
 import { getOnboardingData } from './utils/onboarding';
@@ -92,6 +93,11 @@ function App() {
     if (next && (view === 'admin' || view === 'createBuilding')) setView('home');
   };
 
+  const openConsole = () => {
+    if (viewAsResident) toggleViewAsResident();
+    setView('admin');
+  };
+
   const openSettings = (section: SettingsSection) => {
     setSettingsSection(section);
     setView('settings');
@@ -121,7 +127,7 @@ function App() {
         idToken={tokens!.id_token}
         currentUser={effectiveUser!}
         onCreateBuilding={() => setView('createBuilding')}
-        onBack={() => setView(building ? 'settings' : 'home')}
+        onBack={() => setView('home')}
         onBuildingsChanged={() => setBuildingReload((n) => n + 1)}
       />
     );
@@ -182,6 +188,15 @@ function App() {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {content}
+        {/* The wrench: admin tools for real admins, everywhere except the full-screen wizard. */}
+        {isAuthenticated && profile && isRealAdmin && view !== 'createBuilding' && (
+          <AdminFab
+            viewAsResident={viewAsResident}
+            onToggleViewAsResident={toggleViewAsResident}
+            onOpenConsole={openConsole}
+            consoleOpen={isAdmin && view === 'admin'}
+          />
+        )}
       </ThemeProvider>
     </CacheProvider>
   );

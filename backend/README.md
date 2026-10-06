@@ -35,7 +35,7 @@ prisma/
 | `POST /buildings/join` | any | `{ buildingId, password }` — join (replaces any previous building). |
 | `POST /buildings/leave` | any | Leave the current building. |
 | `PATCH /buildings/me/membership` | member | Update own unit: apartment, floor, relationType, sqrm, paymentMethod. |
-| `GET /buildings/:id/members` | member/admin | Members with unit and role, committee first. |
+| `GET /buildings/:id/members` | member/admin | Members with unit and role, building management (committee head, management company) first. |
 | `GET /buildings/:id/messages` · `POST` | member/admin | List / post (`{ title, description?, type? }`). |
 | `PATCH /messages/:id` · `DELETE` | author/admin | Edit / delete a message. |
 | `GET /buildings/:id/docs` · `POST` | member/admin | List / upload (`multipart/form-data`: `file`, optional `title`; ≤ 10 MB; PDF, Office, images, text). |
@@ -46,7 +46,7 @@ prisma/
 | `PATCH /admin/buildings/:id` · `DELETE` | admin | Edit (omit `password` to keep it) / delete (cascades to everything in the building). |
 | `POST /admin/buildings/:id/contact-links` | admin | `{ type: whatsapp\|phone\|email, link }` — WhatsApp must be `https://`. |
 | `DELETE /admin/contact-links/:id` | admin | Remove a contact link. |
-| `PUT /admin/buildings/:id/members/:userId/role` | admin | `{ role: committee_head\|committee_member\|manager\|resident }`. |
+| `PUT /admin/buildings/:id/members/:userId/role` | admin | `{ role: committee_head\|management_company\|resident }`. |
 | `DELETE /admin/buildings/:id/members/:userId` | admin | Remove a member from the building. |
 
 Errors use normal HTTP codes: 400 validation / unsupported file, 401 no or bad token, 403 not allowed, 404 not found, 409 duplicate building address in a city, 413 file too large.

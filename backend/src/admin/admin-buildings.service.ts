@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma, UserRole } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { DocsService } from '../docs/docs.service.js';
 import { ContactLinkDto, CreateBuildingDto, UpdateBuildingDto } from './dto/building.dto.js';
 
 const ADMIN_BUILDING_SELECT = {
@@ -37,7 +38,10 @@ function normalizeContactLink({ type, link }: ContactLinkDto): ContactLinkDto {
 
 @Injectable()
 export class AdminBuildingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly docsService: DocsService,
+  ) {}
 
   list() {
     return this.prisma.building.findMany({ select: ADMIN_BUILDING_SELECT, orderBy: { createdAt: 'asc' } });
@@ -101,9 +105,10 @@ export class AdminBuildingsService {
     return { ok: true };
   }
 
-  /** Cascades to memberships, roles, contact links, docs and messages. */
+  /** Cascades to memberships, roles, contact links, docs and messages — and deletes the uploaded files. */
   async remove(id: string) {
     await this.write(() => this.prisma.building.delete({ where: { id } }));
+    await this.docsService.removeBuildingFiles(id);
     return { ok: true };
   }
 

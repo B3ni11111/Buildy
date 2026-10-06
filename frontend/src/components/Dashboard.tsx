@@ -36,7 +36,7 @@ interface DashboardProps {
   building: Building;
   idToken: string;
   onOpenSettings: (section: SettingsSection) => void;
-  /** Present only for real admins (see UserInfo). */
+  /** Present only for real admins: drives the "viewing as a resident" banner. */
   adminView?: { viewAsResident: boolean; onToggle: () => void };
   onBuildingChange: (building: Building) => void;
   /** Refetch the building (e.g. member count after an admin changes membership). */
@@ -91,10 +91,9 @@ export default function Dashboard({
       <UserInfo
         onEditProfile={() => onOpenSettings('profile')}
         onOpenPreferences={() => onOpenSettings('preferences')}
-        adminView={adminView}
       />
 
-      <Container maxWidth="lg" sx={{ py: 5 }}>
+      <Container maxWidth="lg" sx={{ pt: 5, pb: 12 }}>
         {adminView?.viewAsResident && (
           <Alert
             severity="info"

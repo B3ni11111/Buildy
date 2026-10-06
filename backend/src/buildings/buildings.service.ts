@@ -25,8 +25,11 @@ const MEMBERSHIP_SELECT = {
 
 const RELATION_TYPES = ['owner', 'tenant'] as const;
 
-/** Display order of building roles — committee first. A member's role is their highest one. */
-export const ROLE_ORDER: UserRole[] = ['committee_head', 'committee_member', 'manager', 'resident'];
+/**
+ * Display order of building roles — building management (committee head and
+ * management company, same level) before residents. A member's role is their highest one.
+ */
+export const ROLE_ORDER: UserRole[] = ['committee_head', 'management_company', 'resident'];
 
 @Injectable()
 export class BuildingsService {
@@ -116,7 +119,7 @@ export class BuildingsService {
     return { ok: true };
   }
 
-  /** Everyone in the building with their unit and role, committee first, then by apartment. */
+  /** Everyone in the building with their unit and role, management first, then by apartment. */
   async members(cognitoSub: string, buildingId: string) {
     await this.requireMember(cognitoSub, buildingId);
     const rows = await this.prisma.buildingUser.findMany({

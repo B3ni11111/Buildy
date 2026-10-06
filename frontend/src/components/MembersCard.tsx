@@ -25,13 +25,13 @@ import { api } from '../utils/api';
 import { useMembers } from '../hooks/useMembers';
 import { BUILDING_ROLES, BuildingRole, CurrentUser, Member } from '../types/building';
 
-const COMMITTEE_ROLES: BuildingRole[] = ['committee_head', 'committee_member', 'manager'];
+// Building management — committee head and management company, on the same level above residents.
+const MANAGEMENT_ROLES: BuildingRole[] = ['committee_head', 'management_company'];
 const RESIDENT_PREVIEW = 5;
 
 const ROLE_CHIP: Record<BuildingRole, { color: 'primary' | 'secondary' | 'default'; variant: 'filled' | 'outlined' }> = {
   committee_head: { color: 'primary', variant: 'filled' },
-  committee_member: { color: 'primary', variant: 'outlined' },
-  manager: { color: 'secondary', variant: 'outlined' },
+  management_company: { color: 'secondary', variant: 'filled' },
   resident: { color: 'default', variant: 'outlined' },
 };
 
@@ -86,7 +86,7 @@ function MemberRow({
   );
 }
 
-/** Full member list, committee first. Admins get a role picker and a remove button per member. */
+/** Full member list, building management first. Admins get a role picker and a remove button per member. */
 export function MembersList({
   buildingId,
   idToken,
@@ -105,8 +105,8 @@ export function MembersList({
   const [removing, setRemoving] = useState<Member | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const committee = members.filter((m) => COMMITTEE_ROLES.includes(m.role));
-  const residents = members.filter((m) => !COMMITTEE_ROLES.includes(m.role));
+  const management = members.filter((m) => MANAGEMENT_ROLES.includes(m.role));
+  const residents = members.filter((m) => !MANAGEMENT_ROLES.includes(m.role));
 
   const run = async (action: () => Promise<unknown>) => {
     setError(null);
@@ -165,7 +165,7 @@ export function MembersList({
           {t('members.empty')}
         </Typography>
       )}
-      {section(t('members.committee'), committee)}
+      {section(t('members.management'), management)}
       {section(t('members.residents'), residents)}
 
       <Dialog open={removing !== null} onClose={() => setRemoving(null)} maxWidth="xs" fullWidth>
@@ -205,7 +205,7 @@ interface MembersCardProps {
   onMembershipChanged: () => void;
 }
 
-/** Dashboard summary: the whole committee, then the first few residents. */
+/** Dashboard summary: building management (committee head, management company), then the first few residents. */
 export default function MembersCard({
   buildingId,
   idToken,
@@ -217,8 +217,8 @@ export default function MembersCard({
   const { t } = useLanguage();
   const { members, reload } = useMembers(idToken, buildingId);
 
-  const committee = (members ?? []).filter((m) => COMMITTEE_ROLES.includes(m.role));
-  const residents = (members ?? []).filter((m) => !COMMITTEE_ROLES.includes(m.role));
+  const management = (members ?? []).filter((m) => MANAGEMENT_ROLES.includes(m.role));
+  const residents = (members ?? []).filter((m) => !MANAGEMENT_ROLES.includes(m.role));
 
   return (
     <Card variant="outlined" sx={{ borderRadius: 4, height: '100%' }}>
@@ -239,12 +239,12 @@ export default function MembersCard({
           </Button>
         </Stack>
 
-        {committee.length > 0 && (
+        {management.length > 0 && (
           <Box sx={{ bgcolor: 'action.hover', borderRadius: 3, px: 1.5, py: 0.5, mb: 1.5 }}>
             <Typography variant="overline" color="primary" sx={{ display: 'block', lineHeight: 2, fontWeight: 600 }}>
-              {t('members.committee')}
+              {t('members.management')}
             </Typography>
-            {committee.map((member) => (
+            {management.map((member) => (
               <MemberRow key={member.userId} member={member} currentUser={currentUser} />
             ))}
           </Box>

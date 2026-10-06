@@ -107,6 +107,11 @@ export class DocsService {
     return { ok: true };
   }
 
+  /** Removes every uploaded file of a building (its DB rows go via the building's cascade delete). */
+  async removeBuildingFiles(buildingId: string) {
+    await rm(this.pathFor(buildingId), { recursive: true, force: true });
+  }
+
   private async requireUploaderOrAdmin(cognitoSub: string, docId: string) {
     const doc = await this.prisma.doc.findUnique({
       where: { id: docId },

@@ -7,5 +7,6 @@ import { BuildingsModule } from '../buildings/buildings.module.js';
   imports: [BuildingsModule],
   controllers: [DocsController, DocDetailController],
   providers: [DocsService],
+  exports: [DocsService],
 })
 export class DocsModule {}
