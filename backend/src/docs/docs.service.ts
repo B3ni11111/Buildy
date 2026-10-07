@@ -1,9 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { extname, join, resolve, sep } from 'node:path';
+import { extname, join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BuildingsService } from '../buildings/buildings.service.js';
+import { uploadPath, type UploadedFileData } from '../uploads/uploads.js';
+import { effectiveAdmin } from '../auth/request-context.js';
+
+export type { UploadedFileData };
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -22,14 +26,6 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 
-/** The subset of multer's file object we use (memory storage). */
-export interface UploadedFileData {
-  originalname: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
-
 const DOC_SELECT = {
   id: true,
   buildingId: true,
@@ -43,8 +39,6 @@ const DOC_SELECT = {
 
 @Injectable()
 export class DocsService {
-  private readonly uploadsDir = resolve(process.env.UPLOADS_DIR ?? 'uploads');
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly buildingsService: BuildingsService,
@@ -63,7 +57,7 @@ export class DocsService {
     // Storage key is generated here — the client's file name is only kept as metadata.
     const ext = extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '').slice(0, 10);
     const src = `${buildingId}/${randomUUID()}${ext}`;
-    const path = this.pathFor(src);
+    const path = uploadPath(src);
     await mkdir(join(path, '..'), { recursive: true });
     await writeFile(path, file.buffer);
 
@@ -92,7 +86,7 @@ export class DocsService {
     const doc = await this.prisma.doc.findUnique({ where: { id: docId } });
     if (!doc) throw new NotFoundException('Document not found');
     await this.buildingsService.requireMember(cognitoSub, doc.buildingId);
-    return { path: this.pathFor(doc.src), fileName: doc.fileName, mimeType: doc.mimeType };
+    return { path: uploadPath(doc.src), fileName: doc.fileName, mimeType: doc.mimeType };
   }
 
   async rename(cognitoSub: string, docId: string, title: string) {
@@ -103,13 +97,13 @@ export class DocsService {
   async remove(cognitoSub: string, docId: string) {
     const doc = await this.requireUploaderOrAdmin(cognitoSub, docId);
     await this.prisma.doc.delete({ where: { id: docId } });
-    await rm(this.pathFor(doc.src), { force: true });
+    await rm(uploadPath(doc.src), { force: true });
     return { ok: true };
   }
 
   /** Removes every uploaded file of a building (its DB rows go via the building's cascade delete). */
   async removeBuildingFiles(buildingId: string) {
-    await rm(this.pathFor(buildingId), { recursive: true, force: true });
+    await rm(uploadPath(buildingId), { recursive: true, force: true });
   }
 
   private async requireUploaderOrAdmin(cognitoSub: string, docId: string) {
@@ -118,17 +112,11 @@ export class DocsService {
       include: { uploader: { select: { cognitoSub: true } } },
     });
     if (!doc) throw new NotFoundException('Document not found');
-    if (doc.uploader.cognitoSub !== cognitoSub) {
+    // A former resident's doc (uploader null) can only be changed by an admin.
+    if (doc.uploader?.cognitoSub !== cognitoSub) {
       const user = await this.prisma.user.findUnique({ where: { cognitoSub }, select: { isAdmin: true } });
-      if (!user?.isAdmin) throw new ForbiddenException('Only the uploader or an admin can change this document');
+      if (!effectiveAdmin(user)) throw new ForbiddenException('Only the uploader or an admin can change this document');
     }
     return doc;
-  }
-
-  /** Absolute path for a storage key, refusing anything that escapes the uploads dir. */
-  private pathFor(src: string) {
-    const path = resolve(this.uploadsDir, src);
-    if (!path.startsWith(this.uploadsDir + sep)) throw new BadRequestException('Invalid document path');
-    return path;
   }
 }

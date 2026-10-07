@@ -11,8 +11,9 @@ export function getOnboardingData(): OnboardingData | null {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as OnboardingData;
-    if (!parsed.language || !parsed.name || !parsed.userType) return null;
-    return parsed;
+    // Profiles saved before 2026-10-06 also carry a userType — ignored now.
+    if (!parsed.language || !parsed.name) return null;
+    return { language: parsed.language, name: parsed.name };
   } catch {
     return null;
   }

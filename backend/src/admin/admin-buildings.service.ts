@@ -3,6 +3,7 @@ import { Prisma, UserRole } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DocsService } from '../docs/docs.service.js';
+import { BuildingsService } from '../buildings/buildings.service.js';
 import { ContactLinkDto, CreateBuildingDto, UpdateBuildingDto } from './dto/building.dto.js';
 
 const ADMIN_BUILDING_SELECT = {
@@ -41,6 +42,7 @@ export class AdminBuildingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly docsService: DocsService,
+    private readonly buildingsService: BuildingsService,
   ) {}
 
   list() {
@@ -97,11 +99,8 @@ export class AdminBuildingsService {
   }
 
   async removeMember(buildingId: string, userId: string) {
-    const [, { count }] = await this.prisma.$transaction([
-      this.prisma.userRoleAssignment.deleteMany({ where: { buildingId, userId } }),
-      this.prisma.buildingUser.deleteMany({ where: { buildingId, userId } }),
-    ]);
-    if (count === 0) throw new NotFoundException('Not a member of this building');
+    const removed = await this.buildingsService.removeFromBuilding(buildingId, userId);
+    if (removed === 0) throw new NotFoundException('Not a member of this building');
     return { ok: true };
   }
 

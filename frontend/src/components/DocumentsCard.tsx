@@ -109,7 +109,7 @@ export default function DocumentsCard({
     };
   }, [idToken, buildingId]);
 
-  const canModify = (doc: Doc) => !!currentUser && (currentUser.isAdmin || doc.uploader.id === currentUser.id);
+  const canModify = (doc: Doc) => !!currentUser && (currentUser.isAdmin || doc.uploader?.id === currentUser.id);
   const dateFormat = new Intl.DateTimeFormat(language, { day: 'numeric', month: 'short', year: 'numeric' });
 
   const closeUpload = () => {
@@ -246,7 +246,7 @@ export default function DocumentsCard({
                     </ListItemIcon>
                     <ListItemText
                       primary={doc.title}
-                      secondary={[doc.uploader.name, dateFormat.format(new Date(doc.uploadDate)), formatSize(doc.sizeBytes)]
+                      secondary={[doc.uploader ? doc.uploader.name : t('common.formerResident'), dateFormat.format(new Date(doc.uploadDate)), formatSize(doc.sizeBytes)]
                         .filter(Boolean)
                         .join(' · ')}
                       slotProps={{ primary: { sx: { fontWeight: 500 } } }}

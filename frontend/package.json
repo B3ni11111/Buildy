@@ -19,6 +19,8 @@
     "docx-preview": "^0.4.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-easy-crop": "^6.2.4",
+    "react-grid-layout": "^2.3.0",
     "stylis": "^4.4.0",
     "stylis-plugin-rtl": "^2.1.1",
     "vite": "^8.2.0"

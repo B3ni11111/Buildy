@@ -1,5 +1,4 @@
 import { LanguageCode } from '../types/language';
-import { TranslationKey } from '../i18n/translations';
 
 export interface LanguageOption {
   code: LanguageCode;
@@ -18,36 +17,6 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
 ];
 
-export type UserTypeIcon = 'home' | 'key' | 'group' | 'admin';
-export type UserTypeValue = 'owner' | 'tenant' | 'committee' | 'manager';
-
-export interface UserTypeOption {
-  value: UserTypeValue;
-  icon: UserTypeIcon;
-  labelKey: TranslationKey;
-  descriptionKey: TranslationKey;
-}
-
-// More resident types can be appended here later without touching the
-// step component itself — just add an entry and its two translation
-// keys (`userType.<value>.label` / `.description`) to every language in
-// src/i18n/translations.ts.
-export const USER_TYPE_OPTIONS: UserTypeOption[] = [
-  { value: 'owner', icon: 'home', labelKey: 'userType.owner.label', descriptionKey: 'userType.owner.description' },
-  { value: 'tenant', icon: 'key', labelKey: 'userType.tenant.label', descriptionKey: 'userType.tenant.description' },
-  {
-    value: 'committee',
-    icon: 'group',
-    labelKey: 'userType.committee.label',
-    descriptionKey: 'userType.committee.description',
-  },
-  {
-    value: 'manager',
-    icon: 'admin',
-    labelKey: 'userType.manager.label',
-    descriptionKey: 'userType.manager.description',
-  },
-];
 
 // Purely decorative — the multilingual "hello" cycle on the greeting
 // screen. Unrelated to the language the resident ultimately selects.

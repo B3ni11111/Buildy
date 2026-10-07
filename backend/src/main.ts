@@ -2,9 +2,12 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module.js';
+import { requestContextMiddleware } from './auth/request-context.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // First, so every guard/service can see the per-request "view as resident" flag.
+  app.use(requestContextMiddleware);
   const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',');
   app.enableCors({ origin: corsOrigins });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

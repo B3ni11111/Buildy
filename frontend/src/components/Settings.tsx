@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Avatar,
   Box,
   Button,
   Card,
@@ -14,8 +13,8 @@ import {
   DialogTitle,
   Divider,
   MenuItem,
-  Snackbar,
   Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -32,9 +31,13 @@ import { useAuth } from '../context/AuthContext';
 import { useColorMode, type ColorModePreference } from '../context/ColorModeContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { saveOnboardingData } from '../utils/onboarding';
-import { LANGUAGE_OPTIONS, USER_TYPE_OPTIONS } from '../onboarding/onboardingData';
+import { LANGUAGE_OPTIONS } from '../onboarding/onboardingData';
+import AvatarEditor, { type StagedPicture } from './AvatarEditor';
+import { ApiError, api } from '../utils/api';
+import type { CurrentUser } from '../types/building';
 import { OnboardingData } from '../types/onboarding';
 import { LanguageCode } from '../types/language';
+import { getLayoutEditing, resetLayouts, setLayoutEditing } from '../utils/homeLayout';
 
 const DELETE_CONFIRM_PHRASE = 'DELETE';
 const LEAVE_CONFIRM_PHRASE = 'LEAVE';
@@ -50,7 +53,12 @@ export type SettingsSection = 'profile' | 'preferences';
 interface SettingsProps {
   profile: OnboardingData;
   onUpdateProfile: (data: OnboardingData) => void;
+  /** Backend view of the user (phone, picture). */
+  currentUser: CurrentUser | null;
+  onCurrentUserChange: (user: CurrentUser) => void;
   onBack: () => void;
+  /** The building "Leave building" applies to (the one on the home screen). */
+  buildingName: string;
   onLeaveBuilding: () => void;
   /** Present only for admins. */
   onOpenAdmin?: () => void;
@@ -74,23 +82,37 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export default function Settings({
   profile,
   onUpdateProfile,
+  currentUser,
+  onCurrentUserChange,
   onBack,
+  buildingName,
   onLeaveBuilding,
   onOpenAdmin,
   initialSection,
 }: SettingsProps) {
-  const { user } = useAuth();
+  const { user, tokens, logout } = useAuth();
+  const idToken = tokens?.id_token ?? '';
   const { t, dir, language, setLanguage } = useLanguage();
   const { preference, setPreference } = useColorMode();
   const preferencesRef = useRef<HTMLDivElement>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState(profile.name);
-  const [draftUserType, setDraftUserType] = useState(profile.userType);
+  const [draftPhone, setDraftPhone] = useState(currentUser?.phone ?? '');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  // A picture change waits here until the profile is saved; Cancel drops it.
+  const [stagedPicture, setStagedPicture] = useState<StagedPicture>(null);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+
+  // Home-grid editing is a device preference; the Dashboard reads it when it opens.
+  const [layoutEditing, setLayoutEditingState] = useState(getLayoutEditing);
+  const [layoutReset, setLayoutReset] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-  const [deleteStubOpen, setDeleteStubOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaveConfirmText, setLeaveConfirmText] = useState('');
@@ -103,8 +125,22 @@ export default function Settings({
 
   const startEditing = () => {
     setDraftName(profile.name);
-    setDraftUserType(profile.userType);
+    setDraftPhone(currentUser?.phone ?? '');
+    setProfileError(null);
     setIsEditing(true);
+  };
+
+  /** Replaces the staged picture, releasing the previous preview's temporary URL. */
+  const stagePicture = (next: StagedPicture) => {
+    if (stagedPicture?.kind === 'upload') URL.revokeObjectURL(stagedPicture.previewUrl);
+    setStagedPicture(next);
+    setPictureError(null);
+    if (next && !isEditing) startEditing();
+  };
+
+  const cancelEditing = () => {
+    stagePicture(null);
+    setIsEditing(false);
   };
 
   const saveProfile = (updated: OnboardingData) => {
@@ -112,9 +148,33 @@ export default function Settings({
     onUpdateProfile(updated);
   };
 
-  const handleSave = () => {
-    saveProfile({ ...profile, name: draftName.trim() || profile.name, userType: draftUserType });
-    setIsEditing(false);
+  const handleSave = async () => {
+    const name = draftName.trim() || profile.name;
+    setSavingProfile(true);
+    setProfileError(null);
+    try {
+      // The picture is only uploaded/removed now, when the whole profile is saved.
+      if (stagedPicture?.kind === 'upload') {
+        try {
+          await api.setAvatar(idToken, stagedPicture.file);
+        } catch {
+          setProfileError(t('settings.pictureError'));
+          return;
+        }
+      } else if (stagedPicture?.kind === 'remove') {
+        await api.removeAvatar(idToken);
+      }
+      // Name lives in the device profile and the account; phone only in the account.
+      const updated = await api.updateMe(idToken, { name, phone: draftPhone.trim() });
+      onCurrentUserChange(updated);
+      saveProfile({ ...profile, name });
+      stagePicture(null);
+      setIsEditing(false);
+    } catch (err) {
+      setProfileError(t(err instanceof ApiError && err.status === 400 ? 'settings.phoneInvalid' : 'settings.saveError'));
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   // Preferences apply immediately — no save button.
@@ -128,12 +188,17 @@ export default function Settings({
     setDeleteConfirmText('');
   };
 
-  const handleConfirmDelete = () => {
-    // NOT wired up yet — deletion itself is intentionally a stub until
-    // the real account-deletion endpoint exists. This only confirms the
-    // UI flow (type-to-confirm) works.
-    closeDeleteDialog();
-    setDeleteStubOpen(true);
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      // Erases the account (messages/docs stay as "Former resident"), then signs out.
+      await api.deleteAccount(idToken);
+      logout();
+    } catch {
+      setDeleteError(t('settings.saveError'));
+      setDeleting(false);
+    }
   };
 
   const closeLeaveDialog = () => {
@@ -147,7 +212,7 @@ export default function Settings({
   };
 
   const BackIcon = dir === 'rtl' ? ArrowForwardIcon : ArrowBackIcon;
-  const selectedUserType = USER_TYPE_OPTIONS.find((opt) => opt.value === profile.userType);
+  const picture = currentUser?.picture ?? { google: user.picture ?? null, version: null };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pt: 5, pb: 12 }}>
@@ -185,12 +250,15 @@ export default function Settings({
                 </Stack>
 
                 <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-                  <Avatar
-                    src={user.picture}
-                    alt={profile.name || user.name || 'User'}
-                    sx={{ width: 64, height: 64, border: '3px solid', borderColor: 'primary.main' }}
+                  <AvatarEditor
+                    userId={currentUser?.id ?? user.sub}
+                    name={profile.name || user.name}
+                    picture={picture}
+                    staged={stagedPicture}
+                    onStage={stagePicture}
+                    onError={setPictureError}
                   />
-                  <Box sx={{ minWidth: 0 }}>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                       {profile.name || user.name || 'N/A'}
                     </Typography>
@@ -199,6 +267,7 @@ export default function Settings({
                     </Typography>
                   </Box>
                 </Stack>
+                {pictureError && <Alert severity="error">{pictureError}</Alert>}
 
                 <Divider />
 
@@ -212,23 +281,29 @@ export default function Settings({
                       fullWidth
                     />
                     <TextField
-                      select
-                      label={t('settings.roleLabel')}
-                      value={draftUserType}
-                      onChange={(e) => setDraftUserType(e.target.value)}
+                      label={t('settings.phoneLabel')}
+                      value={draftPhone}
+                      onChange={(e) => setDraftPhone(e.target.value)}
+                      helperText={t('settings.phoneHint')}
+                      slotProps={{ htmlInput: { inputMode: 'tel', dir: 'ltr' } }}
                       fullWidth
-                    >
-                      {USER_TYPE_OPTIONS.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.value}>
-                          {t(opt.labelKey)}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    />
+                    {stagedPicture && (
+                      <Alert severity="info">
+                        {t(stagedPicture.kind === 'upload' ? 'picture.pendingUpload' : 'picture.pendingRemove')}
+                      </Alert>
+                    )}
+                    {profileError && <Alert severity="error">{profileError}</Alert>}
                     <Stack direction="row" spacing={1.5} sx={{ justifyContent: 'flex-end' }}>
-                      <Button onClick={() => setIsEditing(false)} sx={{ textTransform: 'none' }}>
+                      <Button onClick={cancelEditing} sx={{ textTransform: 'none' }}>
                         {t('common.cancel')}
                       </Button>
-                      <Button variant="contained" onClick={handleSave} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                      <Button
+                        variant="contained"
+                        disabled={savingProfile}
+                        onClick={handleSave}
+                        sx={{ textTransform: 'none', fontWeight: 600 }}
+                      >
                         {t('common.save')}
                       </Button>
                     </Stack>
@@ -238,9 +313,9 @@ export default function Settings({
                     <Field label={t('settings.nameLabel')}>
                       <Typography variant="body2">{profile.name}</Typography>
                     </Field>
-                    <Field label={t('settings.roleLabel')}>
-                      <Typography variant="body2">
-                        {selectedUserType ? t(selectedUserType.labelKey) : profile.userType}
+                    <Field label={t('settings.phoneLabel')}>
+                      <Typography variant="body2" dir="ltr" sx={{ textAlign: 'start' }}>
+                        {currentUser?.phone || '—'}
                       </Typography>
                     </Field>
                     <Field label={t('settings.email')}>
@@ -312,6 +387,34 @@ export default function Settings({
                     ))}
                   </ToggleButtonGroup>
                 </Field>
+                <Field label={t('layout.sectionTitle')}>
+                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                    <Box>
+                      <Typography variant="body2">{t('layout.editToggle')}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t('layout.editToggleHint')}
+                      </Typography>
+                    </Box>
+                    <Switch
+                      checked={layoutEditing}
+                      onChange={(e) => {
+                        setLayoutEditing(e.target.checked);
+                        setLayoutEditingState(e.target.checked);
+                      }}
+                    />
+                  </Stack>
+                  <Button
+                    size="small"
+                    disabled={layoutReset}
+                    onClick={() => {
+                      resetLayouts(user.sub);
+                      setLayoutReset(true);
+                    }}
+                    sx={{ textTransform: 'none', mt: 1, px: 0 }}
+                  >
+                    {layoutReset ? t('layout.resetDone') : t('layout.reset')}
+                  </Button>
+                </Field>
               </Stack>
             </CardContent>
           </Card>
@@ -348,7 +451,7 @@ export default function Settings({
 
                 <Stack spacing={1}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main' }}>
-                    {t('settings.leaveBuildingTitle')}
+                    {t('settings.leaveBuildingTitle')} · {buildingName}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {t('settings.leaveBuildingDescription')}
@@ -396,7 +499,8 @@ export default function Settings({
       >
         <DialogTitle sx={{ fontWeight: 700 }}>{t('settings.deleteDialogTitle')}</DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>{t('settings.deleteDialogDescription')}</DialogContentText>
+          <DialogContentText sx={{ mb: 1 }}>{t('settings.deleteDialogDescription')}</DialogContentText>
+          <DialogContentText sx={{ mb: 2 }}>{t('settings.deleteKeepsContent')}</DialogContentText>
           <DialogContentText sx={{ mb: 1.5, fontWeight: 500 }}>
             {t('settings.deleteConfirmInstruction', { phrase: DELETE_CONFIRM_PHRASE })}
           </DialogContentText>
@@ -407,6 +511,11 @@ export default function Settings({
             onChange={(e) => setDeleteConfirmText(e.target.value)}
             placeholder={t('settings.deleteConfirmPlaceholder', { phrase: DELETE_CONFIRM_PHRASE })}
           />
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={closeDeleteDialog} sx={{ textTransform: 'none' }}>
@@ -415,7 +524,7 @@ export default function Settings({
           <Button
             variant="contained"
             color="error"
-            disabled={deleteConfirmText !== DELETE_CONFIRM_PHRASE}
+            disabled={deleteConfirmText !== DELETE_CONFIRM_PHRASE || deleting}
             onClick={handleConfirmDelete}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
@@ -461,11 +570,6 @@ export default function Settings({
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={deleteStubOpen} autoHideDuration={4000} onClose={() => setDeleteStubOpen(false)}>
-        <Alert severity="info" variant="filled" onClose={() => setDeleteStubOpen(false)} sx={{ borderRadius: 3 }}>
-          Account deletion isn't connected yet — this is a placeholder.
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

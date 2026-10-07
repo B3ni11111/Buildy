@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthUser } from './auth-user.type.js';
+import { effectiveAdmin } from './request-context.js';
 
 /**
  * Allows the request only for users with the global `is_admin` flag.
@@ -17,7 +18,8 @@ export class AdminGuard implements CanActivate {
       where: { cognitoSub: authUser.cognitoSub },
       select: { isAdmin: true },
     });
-    if (!user?.isAdmin) throw new ForbiddenException('Admins only');
+    // An admin previewing as a resident is treated as one here too.
+    if (!effectiveAdmin(user)) throw new ForbiddenException('Admins only');
     return true;
   }
 }

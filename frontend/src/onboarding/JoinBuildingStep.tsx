@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, ButtonBase, CircularProgress, Container, Paper, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  ButtonBase,
+  CircularProgress,
+  Container,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -12,9 +22,13 @@ import { useLanguage } from '../i18n/LanguageContext';
 interface JoinBuildingStepProps {
   idToken: string;
   onJoined: (building: Building) => void;
+  /** Present when joining an additional building — shows a back button. */
+  onCancel?: () => void;
+  /** Buildings the user already belongs to (hidden from the list). */
+  excludeIds?: string[];
 }
 
-export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStepProps) {
+export default function JoinBuildingStep({ idToken, onJoined, onCancel, excludeIds = [] }: JoinBuildingStepProps) {
   const { t } = useLanguage();
   const [buildings, setBuildings] = useState<BuildingSummary[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -28,7 +42,7 @@ export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStep
     api
       .listBuildings(idToken)
       .then((list) => {
-        if (!cancelled) setBuildings(list);
+        if (!cancelled) setBuildings(list.filter((b) => !excludeIds.includes(b.id)));
       })
       .catch((err) => {
         console.error('Failed to load buildings', err);
@@ -40,6 +54,8 @@ export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStep
     return () => {
       cancelled = true;
     };
+    // excludeIds is a fresh array each render; the list only needs loading once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idToken]);
 
   const handleContinue = async () => {
@@ -47,13 +63,21 @@ export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStep
     setSubmitting(true);
     setError(null);
     try {
+      // Apartment and owner/renter are asked afterwards, in "Finish setting up your account".
       const building = await api.joinBuilding(idToken, selectedId, password);
       setConfirmedBuilding(building);
     } catch (err) {
+      const status = err instanceof ApiError ? err.status : 0;
       setError(
-        err instanceof ApiError && err.status === 401
-          ? t('joinBuilding.wrongPassword')
-          : t('joinBuilding.genericError'),
+        t(
+          status === 401
+            ? 'joinBuilding.wrongPassword'
+            : status === 429
+              ? 'joinBuilding.tooManyTries'
+              : status === 403
+                ? 'joinBuilding.blocked'
+                : 'joinBuilding.genericError',
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -83,6 +107,7 @@ export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStep
               onContinue={handleContinue}
               continueDisabled={!selectedId || !password || submitting}
               continueLabel={t('common.finish')}
+              onBack={onCancel}
             >
               {buildings === null ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -153,6 +178,7 @@ export default function JoinBuildingStep({ idToken, onJoined }: JoinBuildingStep
                   sx={{ mt: 2.5 }}
                 />
               )}
+
 
               {error && (
                 <Alert severity="error" sx={{ mt: 2 }}>

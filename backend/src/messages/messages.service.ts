@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { BuildingsService } from '../buildings/buildings.service.js';
 import { CreateMessageDto } from './dto/create-message.dto.js';
 import { UpdateMessageDto } from './dto/update-message.dto.js';
+import { effectiveAdmin } from '../auth/request-context.js';
 
 const WITH_AUTHOR = { author: { select: { id: true, name: true } } } as const;
 
@@ -42,9 +43,10 @@ export class MessagesService {
       include: { author: { select: { cognitoSub: true } } },
     });
     if (!message) throw new NotFoundException('Message not found');
-    if (message.author.cognitoSub !== cognitoSub) {
+    // A former resident's message (author null) can only be changed by an admin.
+    if (message.author?.cognitoSub !== cognitoSub) {
       const user = await this.prisma.user.findUnique({ where: { cognitoSub }, select: { isAdmin: true } });
-      if (!user?.isAdmin) throw new ForbiddenException('Only the author or an admin can modify this message');
+      if (!effectiveAdmin(user)) throw new ForbiddenException('Only the author or an admin can modify this message');
     }
     return message;
   }

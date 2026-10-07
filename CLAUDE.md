@@ -9,7 +9,6 @@ Apartment-building resident management app. Backend: NestJS + Prisma + Postgres.
 | `README.md` | Project overview, features | A feature ships |
 | `DEVLOG.md` | Running log of decisions/gotchas, architecture notes | Any notable change |
 | `DATABASE.md` | Schema docs (Prisma/Postgres, role hierarchy) | Same day as any schema/role change |
-| `NEXT_ITERATION.md` | Dated snapshot of current iteration's recap + next plan | Iteration boundaries |
 | `VISUAL_DESIGN.md` | Color palette, typography, aesthetic spec | Visual direction changes |
 | `backend/README.md` | Backend module map (`src/`, `prisma/`), access rules | Backend modules added/restructured |
 

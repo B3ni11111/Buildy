@@ -76,6 +76,8 @@ model Building {
   createdAt    DateTime             @default(now()) @map("created_at")
   members      BuildingUser[]
   roles        UserRoleAssignment[]
+  apartments   Apartment[]
+  blocks       BuildingBlock[]
   contactLinks ContactLink[]
   docs         Doc[]
   messages     Message[]
@@ -85,24 +87,30 @@ model Building {
 }
 
 model User {
-  id          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // Cognito identity — not in the diagram, but every request is resolved by it.
-  cognitoSub  String               @unique @map("cognito_sub")
-  name        String?
-  phoneNum    String?              @map("phone_num")
+  cognitoSub    String               @unique @map("cognito_sub")
+  name          String?
+  phoneNum      String?              @map("phone_num")
   // Nullable: Cognito tokens don't guarantee an email claim.
-  email       String?              @unique
-  isAdmin     Boolean              @default(false) @map("is_admin")
+  email         String?              @unique
+  isAdmin       Boolean              @default(false) @map("is_admin")
   // Onboarding profile (not in the diagram, used by the onboarding flow).
-  language    String?
-  userType    String?              @map("user_type")
-  onboardedAt DateTime?            @map("onboarded_at")
-  createdAt   DateTime             @default(now()) @map("created_at")
-  updatedAt   DateTime             @updatedAt @map("updated_at")
-  memberships BuildingUser[]
-  roles       UserRoleAssignment[]
-  docs        Doc[]
-  messages    Message[]
+  language      String?
+  onboardedAt   DateTime?            @map("onboarded_at")
+  // Profile picture: an uploaded one (file key under UPLOADS_DIR/avatars/) wins over
+  // the Google photo URL from the Cognito "picture" claim; initials otherwise.
+  avatarSrc     String?              @map("avatar_src")
+  googlePicture String?              @map("google_picture")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  memberships   BuildingUser[]
+  roles         UserRoleAssignment[]
+  apartments    ApartmentResident[]
+  blocks        BuildingBlock[]      @relation("BlockedUser")
+  blocksMade    BuildingBlock[]      @relation("BlockedBy")
+  docs          Doc[]
+  messages      Message[]
 
   @@map("users")
 }
@@ -119,22 +127,65 @@ model UserRoleAssignment {
   @@map("users_roles")
 }
 
+// Membership of a user in a building. Apartments live in `apartments` /
+// `apartment_residents` (a user can hold several apartments in one building).
 model BuildingUser {
-  id             Int            @id @default(autoincrement())
-  buildingId     String         @map("building_id") @db.Uuid
-  building       Building       @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  userId         String         @map("user_id") @db.Uuid
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apartment      Int?           @db.SmallInt
-  floor          Int?
-  relationType   RelationType?  @map("relation_type")
-  sqrm           Int?
-  monthlyPayment Int?           @map("monthly_payment")
-  paymentMethod  PaymentMethod? @map("payment_method")
-  joinedAt       DateTime       @default(now()) @map("joined_at")
+  id                 Int           @id @default(autoincrement())
+  buildingId         String        @map("building_id") @db.Uuid
+  building           Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  userId             String        @map("user_id") @db.Uuid
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // What the user said when joining — a suggestion until building management confirms it.
+  requestedApartment Int?          @map("requested_apartment") @db.SmallInt
+  requestedRelation  RelationType? @map("requested_relation")
+  joinedAt           DateTime      @default(now()) @map("joined_at")
 
   @@unique([buildingId, userId])
   @@map("building_users")
+}
+
+// A physical apartment in a building — technical info, edited by building management.
+model Apartment {
+  id             Int                 @id @default(autoincrement())
+  buildingId     String              @map("building_id") @db.Uuid
+  building       Building            @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  number         Int                 @db.SmallInt
+  floor          Int?
+  sqrm           Int?
+  monthlyPayment Int?                @map("monthly_payment")
+  paymentMethod  PaymentMethod?      @map("payment_method")
+  residents      ApartmentResident[]
+
+  @@unique([buildingId, number])
+  @@map("apartments")
+}
+
+// Who lives in / owns an apartment. An apartment can have an owner and a renter.
+model ApartmentResident {
+  id           Int          @id @default(autoincrement())
+  apartmentId  Int          @map("apartment_id")
+  apartment    Apartment    @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  userId       String       @map("user_id") @db.Uuid
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relationType RelationType @map("relation_type")
+
+  @@unique([apartmentId, userId])
+  @@map("apartment_residents")
+}
+
+// A user blocked from (re)joining a building until unblocked.
+model BuildingBlock {
+  id          Int      @id @default(autoincrement())
+  buildingId  String   @map("building_id") @db.Uuid
+  building    Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id") @db.Uuid
+  user        User     @relation("BlockedUser", fields: [userId], references: [id], onDelete: Cascade)
+  blockedById String?  @map("blocked_by") @db.Uuid
+  blockedBy   User?    @relation("BlockedBy", fields: [blockedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([buildingId, userId])
+  @@map("building_blocks")
 }
 
 model ContactLink {
@@ -151,8 +202,9 @@ model Doc {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   buildingId String   @map("building_id") @db.Uuid
   building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  uploaderId String   @map("uploader") @db.Uuid
-  uploader   User     @relation(fields: [uploaderId], references: [id])
+  // Null once the uploader deleted their account ("Former resident").
+  uploaderId String?  @map("uploader") @db.Uuid
+  uploader   User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
   title      String
   uploadDate DateTime @default(now()) @map("upload_date")
   // Storage key of the file, relative to UPLOADS_DIR (never a user-supplied path).
@@ -169,8 +221,9 @@ model Message {
   id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   buildingId  String      @map("building_id") @db.Uuid
   building    Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  authorId    String      @map("author") @db.Uuid
-  author      User        @relation(fields: [authorId], references: [id])
+  // Null once the author deleted their account ("Former resident").
+  authorId    String?     @map("author") @db.Uuid
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
   type        MessageType @default(general)
   title       String
   description String?

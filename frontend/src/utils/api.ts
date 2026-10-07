@@ -8,11 +8,13 @@ import {
   ContactLinkInput,
   CurrentUser,
   Doc,
+  ApartmentInput,
+  BlockedUser,
   BuildingRole,
   Member,
-  MembershipUpdate,
   Message,
   MessageType,
+  RelationType,
 } from '../types/building';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -26,6 +28,13 @@ export class ApiError extends Error {
   }
 }
 
+// While an admin previews the app as a resident, every request says so and the backend
+// treats them as the lowest level (it can only remove powers, never add them).
+let viewAsResident = false;
+export function setViewAsResident(on: boolean) {
+  viewAsResident = on;
+}
+
 async function send(path: string, idToken: string, options: RequestInit = {}): Promise<Response> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -33,6 +42,7 @@ async function send(path: string, idToken: string, options: RequestInit = {}): P
       // FormData sets its own multipart Content-Type (with boundary).
       ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       Authorization: `Bearer ${idToken}`,
+      ...(viewAsResident ? { 'X-View-As': 'resident' } : {}),
       ...options.headers,
     },
   });
@@ -54,22 +64,59 @@ async function request<T>(path: string, idToken: string, options: RequestInit = 
 export const api = {
   listBuildings: (idToken: string) => request<BuildingSummary[]>('/buildings', idToken),
 
-  getMyBuilding: (idToken: string) => request<Building | null>('/buildings/me', idToken),
+  /** Every building the user belongs to, each from their point of view. */
+  getMyBuildings: (idToken: string) => request<Building[]>('/buildings/mine', idToken),
 
-  joinBuilding: (idToken: string, buildingId: string, password: string) =>
+  /** apartment / relationType are only a suggestion — building management confirms them. */
+  joinBuilding: (
+    idToken: string,
+    buildingId: string,
+    password: string,
+    suggestion: { apartment?: number; relationType?: RelationType } = {},
+  ) =>
     request<Building>('/buildings/join', idToken, {
       method: 'POST',
-      body: JSON.stringify({ buildingId, password }),
+      body: JSON.stringify({ buildingId, password, ...suggestion }),
     }),
 
-  updateMembership: (idToken: string, dto: MembershipUpdate) =>
-    request<Building>('/buildings/me/membership', idToken, {
-      method: 'PATCH',
-      body: JSON.stringify(dto),
-    }),
+  /** The user's own apartment + owner/renter suggestion (building management confirms it). */
+  setMyRequest: (idToken: string, buildingId: string, dto: { apartment: number; relationType: RelationType }) =>
+    request<Building>(`/buildings/${buildingId}/my-request`, idToken, { method: 'PUT', body: JSON.stringify(dto) }),
 
-  leaveBuilding: (idToken: string) =>
-    request<{ ok: boolean }>('/buildings/leave', idToken, { method: 'POST' }),
+  leaveBuilding: (idToken: string, buildingId: string) =>
+    request<{ ok: boolean }>(`/buildings/${buildingId}/leave`, idToken, { method: 'POST' }),
+
+  /** Building management (committee head / management company of the building, or admin). */
+  manage: {
+    setApartments: (idToken: string, buildingId: string, userId: string, apartments: ApartmentInput[]) =>
+      request<{ ok: boolean }>(`/buildings/${buildingId}/manage/members/${userId}/apartments`, idToken, {
+        method: 'PUT',
+        body: JSON.stringify({ apartments }),
+      }),
+
+    removeMember: (idToken: string, buildingId: string, userId: string, block: boolean) =>
+      request<{ ok: boolean }>(
+        `/buildings/${buildingId}/manage/members/${userId}${block ? '?block=true' : ''}`,
+        idToken,
+        { method: 'DELETE' },
+      ),
+
+    listBlocks: (idToken: string, buildingId: string) =>
+      request<BlockedUser[]>(`/buildings/${buildingId}/manage/blocks`, idToken),
+
+    unblock: (idToken: string, buildingId: string, userId: string) =>
+      request<{ ok: boolean }>(`/buildings/${buildingId}/manage/blocks/${userId}`, idToken, { method: 'DELETE' }),
+
+    updateDetails: (
+      idToken: string,
+      buildingId: string,
+      dto: { description?: string | null; entryCode?: string | null; password?: string },
+    ) =>
+      request<Building>(`/buildings/${buildingId}/manage/details`, idToken, {
+        method: 'PATCH',
+        body: JSON.stringify(dto),
+      }),
+  },
 
   listMessages: (idToken: string, buildingId: string) =>
     request<Message[]>(`/buildings/${buildingId}/messages`, idToken),
@@ -95,8 +142,30 @@ export const api = {
 
   getMe: (idToken: string) => request<CurrentUser>('/users/me', idToken),
 
-  updateProfile: (idToken: string, dto: { name: string; language: string; userType: string }) =>
+  /** Mirrors the browser-side onboarding profile (name, language) to the backend. */
+  syncOnboarding: (idToken: string, dto: { name: string; language: string }) =>
     request<CurrentUser>('/users/me/onboarding', idToken, { method: 'PUT', body: JSON.stringify(dto) }),
+
+  /** Private info only — apartments and roles are set by building management. */
+  updateMe: (idToken: string, dto: { name?: string; phone?: string }) =>
+    request<CurrentUser>('/users/me', idToken, { method: 'PATCH', body: JSON.stringify(dto) }),
+
+  setAvatar: (idToken: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<CurrentUser>('/users/me/avatar', idToken, { method: 'PUT', body: form });
+  },
+
+  removeAvatar: (idToken: string) => request<CurrentUser>('/users/me/avatar', idToken, { method: 'DELETE' }),
+
+  /**
+   * A user's uploaded picture (needs the auth header, so fetched as a Blob). The version is in
+   * the URL, so a new picture never comes back from the browser cache as the old one.
+   */
+  avatarBlob: async (idToken: string, userId: string, version: string) =>
+    (await send(`/users/${userId}/avatar?v=${encodeURIComponent(version)}`, idToken)).blob(),
+
+  deleteAccount: (idToken: string) => request<{ ok: boolean }>('/users/me', idToken, { method: 'DELETE' }),
 
   listMembers: (idToken: string, buildingId: string) =>
     request<Member[]>(`/buildings/${buildingId}/members`, idToken),

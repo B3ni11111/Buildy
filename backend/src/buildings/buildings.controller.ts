@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put } from '@nestjs/common';
 import { BuildingsService } from './buildings.service.js';
 import { JoinBuildingDto } from './dto/join-building.dto.js';
-import { UpdateMembershipDto } from './dto/update-membership.dto.js';
+import { MyRequestDto } from './dto/manage.dto.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthUser } from '../auth/auth-user.type.js';
 
@@ -14,19 +14,9 @@ export class BuildingsController {
     return this.buildingsService.list();
   }
 
-  @Get('me')
-  me(@CurrentUser() user: AuthUser) {
-    return this.buildingsService.me(user);
-  }
-
-  @Get(':buildingId/members')
-  members(@CurrentUser() user: AuthUser, @Param('buildingId', ParseUUIDPipe) buildingId: string) {
-    return this.buildingsService.members(user.cognitoSub, buildingId);
-  }
-
-  @Patch('me/membership')
-  updateMembership(@CurrentUser() user: AuthUser, @Body() dto: UpdateMembershipDto) {
-    return this.buildingsService.updateMembership(user, dto);
+  @Get('mine')
+  mine(@CurrentUser() user: AuthUser) {
+    return this.buildingsService.mine(user);
   }
 
   @Post('join')
@@ -34,8 +24,22 @@ export class BuildingsController {
     return this.buildingsService.join(user, dto);
   }
 
-  @Post('leave')
-  leave(@CurrentUser() user: AuthUser) {
-    return this.buildingsService.leave(user);
+  @Put(':buildingId/my-request')
+  setMyRequest(
+    @CurrentUser() user: AuthUser,
+    @Param('buildingId', ParseUUIDPipe) buildingId: string,
+    @Body() dto: MyRequestDto,
+  ) {
+    return this.buildingsService.setMyRequest(user, buildingId, dto);
+  }
+
+  @Post(':buildingId/leave')
+  leave(@CurrentUser() user: AuthUser, @Param('buildingId', ParseUUIDPipe) buildingId: string) {
+    return this.buildingsService.leave(user, buildingId);
+  }
+
+  @Get(':buildingId/members')
+  members(@CurrentUser() user: AuthUser, @Param('buildingId', ParseUUIDPipe) buildingId: string) {
+    return this.buildingsService.members(user.cognitoSub, buildingId);
   }
 }

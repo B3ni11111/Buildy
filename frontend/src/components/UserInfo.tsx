@@ -4,7 +4,6 @@ import {
   Menu,
   MenuItem,
   Box,
-  Avatar,
   Stack,
   Typography,
   Divider,
@@ -13,16 +12,20 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import UserAvatar from './UserAvatar';
+import type { CurrentUser, Picture } from '../types/building';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 
 interface UserInfoProps {
+  /** For the uploaded profile picture; falls back to the Google photo from the login token. */
+  currentUser?: CurrentUser | null;
   onEditProfile?: () => void;
   onOpenPreferences?: () => void;
 }
 
-export default function UserInfo({ onEditProfile, onOpenPreferences }: UserInfoProps) {
+export default function UserInfo({ currentUser, onEditProfile, onOpenPreferences }: UserInfoProps) {
   const { user, logout } = useAuth();
   const { t, dir } = useLanguage();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -31,6 +34,8 @@ export default function UserInfo({ onEditProfile, onOpenPreferences }: UserInfoP
   if (!user) return null;
 
   const close = () => setAnchorEl(null);
+  const displayName = currentUser?.name || user.name || 'User';
+  const picture: Picture = currentUser?.picture ?? { google: user.picture ?? null, version: null };
   const closeThen = (action?: () => void) => () => {
     action?.();
     close();
@@ -44,7 +49,7 @@ export default function UserInfo({ onEditProfile, onOpenPreferences }: UserInfoP
         onClick={(event) => setAnchorEl(event.currentTarget)}
         sx={{ p: 0, '&:hover': { transform: 'scale(1.05)' } }}
       >
-        <Avatar src={user.picture} alt={user.name || 'User'} sx={{ width: 40, height: 40, boxShadow: 2 }} />
+        <UserAvatar userId={currentUser?.id ?? user.sub} name={displayName} picture={picture} size={40} sx={{ boxShadow: 2 }} />
       </IconButton>
 
       <Menu
@@ -57,7 +62,7 @@ export default function UserInfo({ onEditProfile, onOpenPreferences }: UserInfoP
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <Avatar src={user.picture} alt={user.name || 'User'} sx={{ width: 40, height: 40 }} />
+            <UserAvatar userId={currentUser?.id ?? user.sub} name={displayName} picture={picture} size={40} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user.name || 'User'}

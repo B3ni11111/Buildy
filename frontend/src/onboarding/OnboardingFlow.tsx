@@ -3,7 +3,6 @@ import { Box, Container, Paper } from '@mui/material';
 import GreetingStep from './GreetingStep';
 import LanguageStep from './LanguageStep';
 import NameStep from './NameStep';
-import UserTypeStep from './UserTypeStep';
 import ConfirmCheck from './ConfirmCheck';
 import { OnboardingData } from '../types/onboarding';
 import { saveOnboardingData } from '../utils/onboarding';
@@ -12,7 +11,9 @@ import { useLanguage } from '../i18n/LanguageContext';
 // Ordered list of data-entry steps (the greeting screen isn't part of
 // this list — it doesn't collect anything). Append future steps here;
 // the dot progress indicator and back navigation follow automatically.
-const DATA_STEPS = ['language', 'name', 'userType'] as const;
+// Owner/renter is no longer asked here: it's per apartment, suggested when joining a building
+// and confirmed by building management.
+const DATA_STEPS = ['language', 'name'] as const;
 type DataStep = (typeof DATA_STEPS)[number];
 type Step = 'greeting' | DataStep;
 
@@ -54,18 +55,9 @@ export default function OnboardingFlow({ defaultName, onComplete }: OnboardingFl
   };
 
   const handleName = (name: string) => {
-    const updated = { ...data, name };
-    setData(updated);
-    confirmThen(t('name.confirm', { name: name.split(' ')[0] }), () => {
-      setConfirming(null);
-      goToDataStep(stepAfter('name')!);
-    });
-  };
-
-  const handleUserType = (userType: string) => {
-    const finalData = { ...data, userType } as OnboardingData;
+    const finalData = { ...data, name } as OnboardingData;
     setData(finalData);
-    confirmThen(t('userType.confirm'), () => {
+    confirmThen(t('name.confirm', { name: name.split(' ')[0] }), () => {
       saveOnboardingData(finalData);
       onComplete(finalData);
     });
@@ -96,13 +88,6 @@ export default function OnboardingFlow({ defaultName, onComplete }: OnboardingFl
               {step === 'language' && <LanguageStep initialValue={data.language} onSubmit={handleLanguage} />}
               {step === 'name' && (
                 <NameStep initialValue={data.name} onSubmit={handleName} onBack={() => setStep(stepBefore('name'))} />
-              )}
-              {step === 'userType' && (
-                <UserTypeStep
-                  initialValue={data.userType}
-                  onSubmit={handleUserType}
-                  onBack={() => setStep(stepBefore('userType'))}
-                />
               )}
             </>
           )}

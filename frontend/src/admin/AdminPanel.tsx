@@ -465,6 +465,8 @@ function MembersTab({
             buildingId={building.id}
             idToken={idToken}
             currentUser={currentUser}
+            // The console is admin-only, so admins always manage here.
+            canManage
             members={members}
             onChanged={() => {
               reload();

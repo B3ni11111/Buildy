@@ -39,6 +39,7 @@ export class CognitoAuthGuard implements CanActivate {
         cognitoSub: payload.sub,
         email: payload.email as string | undefined,
         name: payload.name as string | undefined,
+        picture: payload.picture as string | undefined,
       };
       return true;
     } catch {

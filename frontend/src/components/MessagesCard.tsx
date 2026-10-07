@@ -238,7 +238,7 @@ export default function MessagesCard({
                           </Typography>
                         )}
                         <Typography component="span" variant="caption" color="text.secondary">
-                          {[message.author.name, dateFormat.format(new Date(message.uploadDate))]
+                          {[message.author ? message.author.name : t('common.formerResident'), dateFormat.format(new Date(message.uploadDate))]
                             .filter(Boolean)
                             .join(' · ')}
                         </Typography>

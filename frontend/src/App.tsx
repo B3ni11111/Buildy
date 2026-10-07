@@ -13,16 +13,18 @@ import { useAuth } from './context/AuthContext';
 import { useLanguage } from './i18n/LanguageContext';
 import { getOnboardingData } from './utils/onboarding';
 import { ltrCache, rtlCache } from './i18n/rtlCache';
-import { api } from './utils/api';
+import { api, setViewAsResident as setApiViewAsResident } from './utils/api';
 import { getTheme } from './theme';
 import { useColorMode } from './context/ColorModeContext';
 import type { OnboardingData } from './types/onboarding';
 import type { Building, CurrentUser } from './types/building';
 
+const CURRENT_BUILDING_KEY = 'buildy_current_building';
+
 function App() {
   const { isAuthenticated, user, tokens } = useAuth();
   const { dir, t } = useLanguage();
-  const [view, setView] = useState<'home' | 'settings' | 'admin' | 'createBuilding'>('home');
+  const [view, setView] = useState<'home' | 'settings' | 'admin' | 'createBuilding' | 'join'>('home');
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('profile');
   // Admins can preview the app as a resident; remembered on this device.
   const [viewAsResident, setViewAsResident] = useState(() => {
@@ -33,35 +35,49 @@ function App() {
     }
   });
   const [profile, setProfile] = useState<OnboardingData | null>(() => getOnboardingData());
-  const [building, setBuilding] = useState<Building | null | undefined>(undefined);
+  // Every building the user belongs to (undefined = still loading).
+  const [buildings, setBuildings] = useState<Building[] | undefined>(undefined);
+  // Which one the home screen shows; remembered on this device.
+  const [currentBuildingId, setCurrentBuildingId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(CURRENT_BUILDING_KEY);
+    } catch {
+      return null;
+    }
+  });
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  // Bumped to refetch the user's building (e.g. after an admin edits or deletes it).
+  // Bumped to refetch the user's buildings (e.g. after management edits one or an admin deletes it).
   const [buildingReload, setBuildingReload] = useState(0);
+
+  // The backend treats requests as a resident's too (header set in utils/api), not just the UI.
+  // Set from the remembered toggle before the first fetch — the header can only remove powers,
+  // so sending it before we know whether the user is an admin is harmless.
+  setApiViewAsResident(viewAsResident);
 
   const { mode } = useColorMode();
   const theme = useMemo(() => getTheme(dir, mode), [dir, mode]);
 
   useEffect(() => {
     if (!isAuthenticated || !profile || !tokens) {
-      setBuilding(undefined);
+      setBuildings(undefined);
       return;
     }
     let cancelled = false;
     api
-      .getMyBuilding(tokens.id_token)
-      .then((b) => {
-        if (!cancelled) setBuilding(b);
+      .getMyBuildings(tokens.id_token)
+      .then((list) => {
+        if (!cancelled) setBuildings(list);
       })
       .catch(() => {
-        if (!cancelled) setBuilding(null);
+        if (!cancelled) setBuildings([]);
       });
     api
       .getMe(tokens.id_token)
       .then(async (me) => {
         // The onboarding profile lives in the browser; mirror it to the backend so
         // neighbours see real names on members and messages.
-        const needsSync = me.name !== profile.name;
-        const synced = needsSync ? await api.updateProfile(tokens.id_token, profile) : me;
+        const needsSync = me.name !== profile.name || me.language !== profile.language;
+        const synced = needsSync ? await api.syncOnboarding(tokens.id_token, profile) : me;
         if (!cancelled) setCurrentUser(synced);
       })
       .catch(() => {});
@@ -70,10 +86,31 @@ function App() {
     };
   }, [isAuthenticated, profile, tokens, buildingReload]);
 
+  const building = buildings?.find((b) => b.id === currentBuildingId) ?? buildings?.[0] ?? null;
+
+  const selectBuilding = (id: string) => {
+    setCurrentBuildingId(id);
+    try {
+      localStorage.setItem(CURRENT_BUILDING_KEY, id);
+    } catch {
+      // not remembered — fine
+    }
+  };
+
+  const handleJoined = (joined: Building) => {
+    setBuildings((current) => [...(current ?? []).filter((b) => b.id !== joined.id), joined]);
+    selectBuilding(joined.id);
+    setView('home');
+  };
+
+  /** Replace one building in the list (e.g. after management edits its details). */
+  const replaceBuilding = (updated: Building) =>
+    setBuildings((current) => (current ?? []).map((b) => (b.id === updated.id ? updated : b)));
+
   const handleLeaveBuilding = async () => {
-    if (!tokens) return;
-    await api.leaveBuilding(tokens.id_token);
-    setBuilding(null);
+    if (!tokens || !building) return;
+    await api.leaveBuilding(tokens.id_token, building.id);
+    setBuildings((current) => (current ?? []).filter((b) => b.id !== building.id));
     setView('home');
   };
 
@@ -91,6 +128,9 @@ function App() {
       // not persisted — still applies for this session
     }
     if (next && (view === 'admin' || view === 'createBuilding')) setView('home');
+    // Refetch so roles/permissions come back at the new level.
+    setApiViewAsResident(next);
+    setBuildingReload((n) => n + 1);
   };
 
   const openConsole = () => {
@@ -131,7 +171,7 @@ function App() {
         onBuildingsChanged={() => setBuildingReload((n) => n + 1)}
       />
     );
-  } else if (building === undefined) {
+  } else if (buildings === undefined) {
     content = (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <CircularProgress />
@@ -143,7 +183,7 @@ function App() {
     // out of OnboardingFlow's synchronous DATA_STEPS wizard.
     content = (
       <>
-        <JoinBuildingStep idToken={tokens!.id_token} onJoined={setBuilding} />
+        <JoinBuildingStep idToken={tokens!.id_token} onJoined={handleJoined} />
         {isAdmin && (
           <Box sx={{ position: 'fixed', bottom: 24, insetInlineStart: 0, insetInlineEnd: 0, textAlign: 'center' }}>
             <Button
@@ -157,12 +197,24 @@ function App() {
         )}
       </>
     );
+  } else if (view === 'join') {
+    content = (
+      <JoinBuildingStep
+        idToken={tokens!.id_token}
+        onJoined={handleJoined}
+        onCancel={() => setView('home')}
+        excludeIds={buildings.map((b) => b.id)}
+      />
+    );
   } else if (view === 'settings') {
     content = (
       <Settings
         profile={profile}
         onUpdateProfile={setProfile}
+        currentUser={currentUser}
+        onCurrentUserChange={setCurrentUser}
         onBack={() => setView('home')}
+        buildingName={building.name}
         onLeaveBuilding={handleLeaveBuilding}
         onOpenAdmin={isAdmin ? () => setView('admin') : undefined}
         initialSection={settingsSection}
@@ -172,12 +224,16 @@ function App() {
     content = (
       <Dashboard
         profile={profile}
+        buildings={buildings}
         building={building}
         idToken={tokens!.id_token}
+        onSelectBuilding={selectBuilding}
+        onJoinAnother={() => setView('join')}
         onOpenSettings={openSettings}
         adminView={isRealAdmin ? { viewAsResident, onToggle: toggleViewAsResident } : undefined}
         currentUser={effectiveUser}
-        onBuildingChange={setBuilding}
+        onCurrentUserChange={setCurrentUser}
+        onBuildingChange={replaceBuilding}
         onBuildingRefresh={() => setBuildingReload((n) => n + 1)}
       />
     );
