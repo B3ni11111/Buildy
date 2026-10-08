@@ -11,9 +11,11 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UsersService, avatarVersion } from '../users/users.service.js';
 import type { AuthUser } from '../auth/auth-user.type.js';
-import { actingAsResident, effectiveAdmin } from '../auth/request-context.js';
+import { effectiveAdmin, viewedRole } from '../auth/request-context.js';
 import { JoinBuildingDto } from './dto/join-building.dto.js';
 import { MyRequestDto, SetApartmentsDto, UpdateBuildingDetailsDto } from './dto/manage.dto.js';
+import type { ContactLinkDto } from '../admin/dto/building.dto.js';
+import { normalizeContactLink } from './contact-links.js';
 
 const BUILDING_SUMMARY_SELECT = {
   id: true,
@@ -66,11 +68,13 @@ export class BuildingsService {
       orderBy: { joinedAt: 'asc' },
       select: { buildingId: true },
     });
-    return Promise.all(memberships.map((m) => this.detail(m.buildingId, user.id, effectiveAdmin(user))));
+    return Promise.all(memberships.map((m) => this.detail(m.buildingId, user)));
   }
 
   /** Full view of a building for one of its members: details, their role, apartments and pending request. */
-  private async detail(buildingId: string, userId: string, isAdmin: boolean) {
+  private async detail(buildingId: string, viewer: { id: string; isAdmin: boolean }) {
+    const userId = viewer.id;
+    const isAdmin = effectiveAdmin(viewer);
     const building = await this.prisma.building.findUniqueOrThrow({
       where: { id: buildingId },
       select: {
@@ -89,8 +93,8 @@ export class BuildingsService {
       },
     });
     const { _count, members, roles, apartments, ...rest } = building;
-    // "View as resident" shows the lowest level everywhere.
-    const role = actingAsResident() ? 'resident' : roleOf(roles);
+    // An admin previewing a role ("view as") gets that role in every building.
+    const role = viewedRole(viewer) ?? roleOf(roles);
     const request = members[0];
     return {
       ...rest,
@@ -150,7 +154,7 @@ export class BuildingsService {
         await tx.userRoleAssignment.create({ data: { userId: user.id, buildingId: building.id, role: 'resident' } });
       }
     });
-    return this.detail(building.id, user.id, effectiveAdmin(user));
+    return this.detail(building.id, user);
   }
 
   /** A member suggests (or updates) their apartment + owner/renter, e.g. from "Finish setting up". */
@@ -161,7 +165,7 @@ export class BuildingsService {
       where: { buildingId_userId: { buildingId, userId: user.id } },
       data: { requestedApartment: dto.apartment, requestedRelation: dto.relationType },
     });
-    return this.detail(buildingId, user.id, effectiveAdmin(user));
+    return this.detail(buildingId, user);
   }
 
   async leave(authUser: AuthUser, buildingId: string) {
@@ -324,7 +328,24 @@ export class BuildingsService {
       data: { ...data, ...(password ? { passwordHash: await hash(password, 10) } : {}) },
     });
     const isMember = await this.prisma.buildingUser.count({ where: { buildingId, userId: manager.id } });
-    return isMember ? this.detail(buildingId, manager.id, effectiveAdmin(manager)) : { ok: true };
+    return isMember ? this.detail(buildingId, manager) : { ok: true };
+  }
+
+  /** Building management adds a contact link (WhatsApp group, phone, email) to their building. */
+  async addContactLink(cognitoSub: string, buildingId: string, dto: ContactLinkDto) {
+    await this.requireManager(cognitoSub, buildingId);
+    return this.prisma.contactLink.create({
+      data: { ...normalizeContactLink(dto), buildingId },
+      select: { id: true, type: true, link: true },
+    });
+  }
+
+  /** Only links of this building — a manager can't delete another building's link by id. */
+  async removeContactLink(cognitoSub: string, buildingId: string, linkId: number) {
+    await this.requireManager(cognitoSub, buildingId);
+    const { count } = await this.prisma.contactLink.deleteMany({ where: { id: linkId, buildingId } });
+    if (count === 0) throw new NotFoundException('Contact link not found');
+    return { ok: true };
   }
 
   // ---- Access checks ----
@@ -351,8 +372,13 @@ export class BuildingsService {
     return user;
   }
 
-  private async isManager(user: { id: string; isAdmin: boolean }, buildingId: string) {
-    if (actingAsResident()) return false;
+  /**
+   * `asRequester`: `user` is the one making this request, so a previewed role ("view as") applies.
+   * Pass false when checking someone else (e.g. the target of a removal) — their real role counts.
+   */
+  private async isManager(user: { id: string; isAdmin: boolean }, buildingId: string, asRequester = true) {
+    const viewed = asRequester ? viewedRole(user) : null;
+    if (viewed) return MANAGEMENT_ROLES.includes(viewed);
     if (user.isAdmin) return true;
     const count = await this.prisma.userRoleAssignment.count({
       where: { userId: user.id, buildingId, role: { in: MANAGEMENT_ROLES } },
@@ -370,7 +396,7 @@ export class BuildingsService {
     if (effectiveAdmin(actor)) return;
     if (actor.id === userId) throw new ForbiddenException('Use "Leave building" instead');
     const target = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, isAdmin: true } });
-    if (target && (await this.isManager(target, buildingId))) {
+    if (target && (await this.isManager(target, buildingId, false))) {
       throw new ForbiddenException('Only an admin can remove building management or admins');
     }
   }

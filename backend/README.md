@@ -27,13 +27,13 @@ prisma/
 - Messages and docs can be changed by their author/uploader, or by an admin.
 - Everything under `/admin` requires `users.is_admin` (`AdminGuard`).
 - Join attempts: 5 wrong passwords per user per building per 15 minutes → 429 (in memory, single instance).
-- **`X-View-As: resident`** request header (sent by the app while an admin previews as a resident): every check treats the caller as a plain resident — no admin bypasses, no building-management powers, `myRole: resident`. It can only remove powers. Implemented with `auth/request-context.ts` (AsyncLocalStorage middleware).
+- **`X-View-As: <role>`** request header (`committee_head` / `management_company` / `resident`, sent by the app while an admin previews a role): the caller loses admin bypasses and gets that role in every building (`myRole`, `canManage`; management roles keep building-management powers). Management roles are honoured **only for real admins** (ignored otherwise — no privilege escalation); `resident` from anyone just removes powers. Applies to the caller only — checks about *other* members (e.g. "can't remove building management") use their real roles. Implemented with `auth/request-context.ts` (`viewedRole`, `effectiveAdmin`; AsyncLocalStorage middleware).
 
 ## API
 
 | Method & path | Who | What |
 |---|---|---|
-| `GET /users/me` | any | The signed-in user: id, name, email, phone, isAdmin, language, `picture { google, version }` (created on first call). |
+| `GET /users/me` | any | The signed-in user: id, name, email, phone, isAdmin, `onboarded` (finished onboarding before — used to skip it on a new sign-in), language, `picture { google, version }` (created on first call). |
 | `PUT /users/me/onboarding` | any | Save name and language from onboarding. |
 | `PATCH /users/me` | any | Private info: `{ name?, phone? }` (empty phone clears it). |
 | `PUT /users/me/avatar` · `DELETE` | any | Upload (`multipart/form-data` `file`; PNG/JPEG/WebP/GIF ≤ 2 MB) / remove the profile picture. |
@@ -49,6 +49,8 @@ prisma/
 | `DELETE /buildings/:id/manage/members/:userId` | management/admin | Remove; `?block=true` also blocks them from rejoining. |
 | `GET /buildings/:id/manage/blocks` · `DELETE …/blocks/:userId` | management/admin | List blocked users / unblock. |
 | `PATCH /buildings/:id/manage/details` | management/admin | `{ description?, entryCode?, password? }` (name/address/city stay admin-only). |
+| `POST /buildings/:id/manage/contact-links` | management/admin | Add a contact link `{ type, link }` (same validation as the admin endpoint, `buildings/contact-links.ts`). |
+| `DELETE /buildings/:id/manage/contact-links/:linkId` | management/admin | Remove one of *this* building's contact links (404 for another building's). |
 | `GET /buildings/:id/messages` · `POST` | member/admin | List / post (`{ title, description?, type? }`). |
 | `PATCH /messages/:id` · `DELETE` | author/admin | Edit / delete a message. |
 | `GET /buildings/:id/docs` · `POST` | member/admin | List / upload (`multipart/form-data`: `file`, optional `title`; ≤ 10 MB; PDF, Office, images, text). |

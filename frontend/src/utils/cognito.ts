@@ -4,6 +4,7 @@ const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN;
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID;
 const SCOPES = import.meta.env.VITE_COGNITO_SCOPE;
 const REDIRECT_URI_OVERRIDE = import.meta.env.VITE_REDIRECT_URI;
+const LOGOUT_URI_OVERRIDE = import.meta.env.VITE_LOGOUT_URI;
 
 console.log('[AUTH DEBUG] Cognito env vars:', {
   VITE_COGNITO_DOMAIN: COGNITO_DOMAIN,
@@ -23,8 +24,24 @@ export function getAuthorizationUrl(): string {
     redirect_uri: getRedirectUri(),
     scope: SCOPES,
     identity_provider: 'Google',
+    // Forwarded to Google: always show "Choose an account", so another account can sign in.
+    prompt: 'select_account',
   });
   return `${COGNITO_DOMAIN}/oauth2/authorize?${params.toString()}`;
+}
+
+/**
+ * Cognito's sign-out page: ends its Hosted UI session (otherwise the next sign-in
+ * silently reuses the previous account), then returns to the app.
+ * The return URL must be listed under the app client's "Allowed sign-out URLs".
+ */
+export function getLogoutUrl(): string {
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    // Must match an "Allowed sign-out URL" exactly — registered without a trailing slash.
+    logout_uri: LOGOUT_URI_OVERRIDE || window.location.origin,
+  });
+  return `${COGNITO_DOMAIN}/logout?${params.toString()}`;
 }
 
 export async function exchangeCodeForTokens(code: string): Promise<Tokens> {

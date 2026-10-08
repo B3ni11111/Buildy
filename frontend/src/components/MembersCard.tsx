@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import CheckIcon from '@mui/icons-material/Check';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
@@ -438,6 +439,7 @@ export function MembersList({
   const { t } = useLanguage();
   const isAdmin = !!currentUser?.isAdmin;
   const [managing, setManaging] = useState<Member | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [changeCount, setChangeCount] = useState(0);
 
@@ -459,6 +461,29 @@ export function MembersList({
     }
   };
 
+  /** One click: give them the apartment they asked for (keeping any they already have) and clear the request. */
+  const approve = async (member: Member) => {
+    const request = member.request;
+    if (request?.apartment == null) return;
+    setError(null);
+    setApproving(member.userId);
+    try {
+      // Number + owner/renter only: floor, size and payment of existing apartments stay as they are.
+      const apartments: ApartmentInput[] = [
+        ...member.apartments
+          .filter((a) => a.number !== request.apartment)
+          .map((a) => ({ number: a.number, relationType: a.relationType })),
+        { number: request.apartment, relationType: request.relationType ?? 'owner' },
+      ];
+      await api.manage.setApartments(idToken, buildingId, member.userId, apartments);
+      changed();
+    } catch {
+      setError(t('members.actionError'));
+    } finally {
+      setApproving(null);
+    }
+  };
+
   // Only admins may remove themselves-as-manager, peers or admins; the backend enforces the same.
   const canRemove = (member: Member) =>
     isAdmin || (member.userId !== currentUser?.id && !member.isAdmin && !MANAGEMENT_ROLES.includes(member.role));
@@ -466,6 +491,19 @@ export function MembersList({
   const trailing = (member: Member) =>
     canManage ? (
       <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+        {member.request?.apartment != null && (
+          <Button
+            size="small"
+            variant="contained"
+            disableElevation
+            startIcon={<CheckIcon />}
+            disabled={approving === member.userId}
+            onClick={() => approve(member)}
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+          >
+            {t('members.approve')}
+          </Button>
+        )}
         {isAdmin ? (
           <TextField
             select

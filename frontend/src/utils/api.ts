@@ -28,11 +28,11 @@ export class ApiError extends Error {
   }
 }
 
-// While an admin previews the app as a resident, every request says so and the backend
-// treats them as the lowest level (it can only remove powers, never add them).
-let viewAsResident = false;
-export function setViewAsResident(on: boolean) {
-  viewAsResident = on;
+// While an admin previews the app as a building role, every request says so and the backend
+// treats them as that role (honoured for real admins only, and it can only remove powers).
+let viewAs: BuildingRole | null = null;
+export function setViewAs(role: BuildingRole | null) {
+  viewAs = role;
 }
 
 async function send(path: string, idToken: string, options: RequestInit = {}): Promise<Response> {
@@ -42,7 +42,7 @@ async function send(path: string, idToken: string, options: RequestInit = {}): P
       // FormData sets its own multipart Content-Type (with boundary).
       ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       Authorization: `Bearer ${idToken}`,
-      ...(viewAsResident ? { 'X-View-As': 'resident' } : {}),
+      ...(viewAs ? { 'X-View-As': viewAs } : {}),
       ...options.headers,
     },
   });
@@ -115,6 +115,17 @@ export const api = {
       request<Building>(`/buildings/${buildingId}/manage/details`, idToken, {
         method: 'PATCH',
         body: JSON.stringify(dto),
+      }),
+
+    addContactLink: (idToken: string, buildingId: string, dto: ContactLinkInput) =>
+      request<ContactLink>(`/buildings/${buildingId}/manage/contact-links`, idToken, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      }),
+
+    removeContactLink: (idToken: string, buildingId: string, linkId: number) =>
+      request<{ ok: boolean }>(`/buildings/${buildingId}/manage/contact-links/${linkId}`, idToken, {
+        method: 'DELETE',
       }),
   },
 

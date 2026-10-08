@@ -23,7 +23,6 @@ import {
   Tabs,
   TextField,
   Typography,
-  createFilterOptions,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -42,12 +41,11 @@ import { MembersList } from '../components/MembersCard';
 import MessagesCard from '../components/MessagesCard';
 import DocumentsCard from '../components/DocumentsCard';
 import { useMembers } from '../hooks/useMembers';
-import ContactLinksEditor from './ContactLinksEditor';
+import EditBuildingDialog from '../components/EditBuildingDialog';
 import { useLanguage } from '../i18n/LanguageContext';
-import { ApiError, api } from '../utils/api';
-import { AdminBuilding, City, ContactLink, ContactType, CurrentUser, MessageType } from '../types/building';
+import { api } from '../utils/api';
+import { AdminBuilding, City, ContactType, CurrentUser, MessageType } from '../types/building';
 
-const filterCities = createFilterOptions<City>({ limit: 50 });
 const SELECTED_KEY = 'buildy_admin_building';
 const TABS = ['overview', 'members', 'messages', 'docs'] as const;
 type ConsoleTab = (typeof TABS)[number];
@@ -346,13 +344,25 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
         <EditBuildingDialog
           key={editing.id}
           building={editing}
+          canEditIdentity
           cities={cities}
-          idToken={idToken}
           onClose={() => setEditing(null)}
-          onSaved={(updated) => {
+          onSave={async (fields) => {
+            const updated = await api.admin.updateBuilding(idToken, editing.id, {
+              name: fields.name!,
+              cityId: fields.cityId!,
+              address: fields.address!,
+              description: fields.description,
+              entryCode: fields.entryCode,
+              ...(fields.password ? { password: fields.password } : {}),
+            });
             replaceBuilding(updated);
             setEditing(null);
             onBuildingsChanged();
+          }}
+          onAddLink={(input) => api.admin.addContactLink(idToken, editing.id, input)}
+          onRemoveLink={async (link) => {
+            await api.admin.removeContactLink(idToken, link.id);
           }}
           onContactLinksChange={(contactLinks) => {
             replaceBuilding({ ...editing, contactLinks });
@@ -504,145 +514,6 @@ function DocsTab({ buildingId, idToken, currentUser }: { buildingId: string; idT
       uploadOpen={uploadOpen}
       onUploadOpenChange={setUploadOpen}
     />
-  );
-}
-
-function EditBuildingDialog({
-  building,
-  cities,
-  idToken,
-  onClose,
-  onSaved,
-  onContactLinksChange,
-}: {
-  building: AdminBuilding;
-  cities: City[];
-  idToken: string;
-  onClose: () => void;
-  onSaved: (updated: AdminBuilding) => void;
-  /** Contact links save immediately (not on "Save"), so the list is reported separately. */
-  onContactLinksChange: (links: ContactLink[]) => void;
-}) {
-  const { t } = useLanguage();
-  const [name, setName] = useState(building.name);
-  const [city, setCity] = useState<City | null>(building.city);
-  const [address, setAddress] = useState(building.address);
-  const [description, setDescription] = useState(building.description ?? '');
-  const [entryCode, setEntryCode] = useState(building.entryCode ?? '');
-  const [password, setPassword] = useState('');
-  const [contactLinks, setContactLinks] = useState<ContactLink[]>(building.contactLinks);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const valid = name.trim() && city && address.trim() && (password === '' || password.length >= 4);
-
-  const handleSave = async () => {
-    if (!valid || !city || saving) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await api.admin.updateBuilding(idToken, building.id, {
-        name: name.trim(),
-        cityId: city.id,
-        address: address.trim(),
-        description: description.trim() || null,
-        entryCode: entryCode.trim() || null,
-        ...(password ? { password } : {}),
-      });
-      onSaved(updated);
-    } catch (err) {
-      setError(t(err instanceof ApiError && err.status === 409 ? 'admin.duplicateError' : 'admin.saveError'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
-      <DialogTitle sx={{ fontWeight: 700 }}>{t('admin.editBuilding')}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2.5} sx={{ mt: 1 }}>
-          <TextField fullWidth label={t('admin.fieldName')} value={name} onChange={(e) => setName(e.target.value)} />
-          <Autocomplete
-            options={cities.length ? cities : [building.city]}
-            value={city}
-            onChange={(_e, value) => setCity(value)}
-            getOptionLabel={(c) => c.name}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            filterOptions={filterCities}
-            renderInput={(params) => <TextField {...params} label={t('admin.fieldCity')} />}
-          />
-          <TextField
-            fullWidth
-            label={t('admin.fieldAddress')}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label={t('admin.fieldDescription')}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label={t('dashboard.entryCode')}
-            value={entryCode}
-            onChange={(e) => setEntryCode(e.target.value)}
-            slotProps={{ htmlInput: { maxLength: 20, dir: 'ltr' } }}
-          />
-          <TextField
-            fullWidth
-            type="password"
-            label={t('admin.passwordKeep')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={password !== '' && password.length < 4}
-            helperText={password !== '' && password.length < 4 ? t('wizard.password.placeholder') : undefined}
-          />
-          <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              {t('admin.contactsTitle')}
-            </Typography>
-            <ContactLinksEditor
-              links={contactLinks}
-              onAdd={async (input) => {
-                const created = await api.admin.addContactLink(idToken, building.id, input);
-                const next = [...contactLinks, created];
-                setContactLinks(next);
-                onContactLinksChange(next);
-              }}
-              onRemove={async (link) => {
-                try {
-                  await api.admin.removeContactLink(idToken, link.id);
-                  const next = contactLinks.filter((l) => l.id !== link.id);
-                  setContactLinks(next);
-                  onContactLinksChange(next);
-                } catch {
-                  setError(t('admin.saveError'));
-                }
-              }}
-            />
-          </Box>
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} sx={{ textTransform: 'none' }}>
-          {t('common.cancel')}
-        </Button>
-        <Button
-          variant="contained"
-          disabled={!valid || saving}
-          onClick={handleSave}
-          sx={{ textTransform: 'none', fontWeight: 600 }}
-        >
-          {t('common.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
   );
 }
 

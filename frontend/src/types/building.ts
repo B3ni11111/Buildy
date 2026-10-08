@@ -83,6 +83,8 @@ export interface CurrentUser {
   name: string | null;
   phone: string | null;
   isAdmin: boolean;
+  /** Finished onboarding at some point (on any device). */
+  onboarded: boolean;
   language: string | null;
   picture: Picture;
 }

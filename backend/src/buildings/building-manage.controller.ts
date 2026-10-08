@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseUUIDPipe, Patch, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { BuildingsService } from './buildings.service.js';
 import { SetApartmentsDto, UpdateBuildingDetailsDto } from './dto/manage.dto.js';
+import { ContactLinkDto } from '../admin/dto/building.dto.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthUser } from '../auth/auth-user.type.js';
 
@@ -51,5 +52,23 @@ export class BuildingManageController {
     @Body() dto: UpdateBuildingDetailsDto,
   ) {
     return this.buildingsService.updateDetails(user.cognitoSub, buildingId, dto);
+  }
+
+  @Post('contact-links')
+  addContactLink(
+    @CurrentUser() user: AuthUser,
+    @Param('buildingId', ParseUUIDPipe) buildingId: string,
+    @Body() dto: ContactLinkDto,
+  ) {
+    return this.buildingsService.addContactLink(user.cognitoSub, buildingId, dto);
+  }
+
+  @Delete('contact-links/:linkId')
+  removeContactLink(
+    @CurrentUser() user: AuthUser,
+    @Param('buildingId', ParseUUIDPipe) buildingId: string,
+    @Param('linkId', ParseIntPipe) linkId: number,
+  ) {
+    return this.buildingsService.removeContactLink(user.cognitoSub, buildingId, linkId);
   }
 }

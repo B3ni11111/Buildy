@@ -7,6 +7,7 @@ import {
   clearTokens,
   decodeIdToken,
   getTokenExpiry,
+  getLogoutUrl,
   refreshTokens,
   saveTokens,
 } from '../utils/cognito';
@@ -32,13 +33,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  /** Forget this account on the device (tokens + per-account choices). */
+  const clearSession = useCallback(() => {
     clearTokens();
     clearOnboardingData();
+    for (const key of ['buildy_current_building', 'buildy_view_as', 'buildy_view_as_resident']) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // nothing stored
+      }
+    }
     setTokens(null);
     setUser(null);
     setIsAuthenticated(false);
   }, []);
+
+  /** Sign out for real: also ends the Cognito session, so the next sign-in can pick another account. */
+  const logout = useCallback(() => {
+    clearSession();
+    window.location.assign(getLogoutUrl());
+  }, [clearSession]);
 
   /** Swap the refresh token for new id/access tokens; false if the session can't be renewed. */
   const renew = useCallback(
@@ -77,10 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!refreshToken || !expiry) return;
     const delay = Math.max(expiry - Date.now() - 2 * 60 * 1000, 0);
     const timer = setTimeout(async () => {
-      if (!(await renew(refreshToken))) logout();
+      if (!(await renew(refreshToken))) clearSession();
     }, delay);
     return () => clearTimeout(timer);
-  }, [tokens, renew, logout]);
+  }, [tokens, renew, clearSession]);
 
   const value: AuthContextType = {
     isAuthenticated,

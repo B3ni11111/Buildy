@@ -105,6 +105,7 @@ export type TranslationKey =
   | 'admin.saveError'
   | 'admin.duplicateError'
   | 'admin.passwordKeep'
+  | 'admin.identityAdminOnly'
   | 'admin.fieldName'
   | 'admin.fieldCity'
   | 'admin.fieldAddress'
@@ -178,9 +179,10 @@ export type TranslationKey =
   | 'theme.system'
   | 'userMenu.profile'
   | 'userMenu.preferences'
-  | 'userMenu.viewAsResident'
-  | 'userMenu.viewAsResidentHint'
-  | 'dashboard.viewingAsResident'
+  | 'adminFab.viewAs'
+  | 'adminFab.viewAsHint'
+  | 'adminFab.roleAdmin'
+  | 'dashboard.viewingAs'
   | 'dashboard.switchBackToAdmin'
   | 'docs.noPreview'
   | 'docs.download'
@@ -225,6 +227,7 @@ export type TranslationKey =
   | 'members.blockedBy'
   | 'members.unblock'
   | 'members.pending'
+  | 'members.approve'
   | 'members.pendingCount'
   | 'myUnit.pending'
   | 'myUnit.setByManagement'
@@ -368,6 +371,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.saveError': "Couldn't save the building. Please try again.",
     'admin.duplicateError': 'A building with this address already exists in this city.',
     'admin.passwordKeep': 'New password (leave empty to keep the current one)',
+    'admin.identityAdminOnly': 'Only an admin can change the name, city and address',
     'admin.fieldName': 'Name',
     'admin.fieldCity': 'City',
     'admin.fieldAddress': 'Address',
@@ -441,9 +445,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'theme.system': 'System',
     'userMenu.profile': 'Edit profile',
     'userMenu.preferences': 'App preferences',
-    'userMenu.viewAsResident': 'View as resident',
-    'userMenu.viewAsResidentHint': 'See buildy the way residents do',
-    'dashboard.viewingAsResident': "You're viewing buildy as a resident — admin tools are hidden.",
+    'adminFab.viewAs': 'View as',
+    'adminFab.viewAsHint': 'Preview buildy as one of these roles',
+    'adminFab.roleAdmin': 'Admin (full access)',
+    'dashboard.viewingAs': "You're viewing buildy as {{role}} — admin tools are hidden.",
     'dashboard.switchBackToAdmin': 'Switch back to admin',
     'docs.noPreview': 'No preview for this file type — download it to open.',
     'docs.download': 'Download',
@@ -488,6 +493,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.blockedBy': 'Blocked by {{name}}',
     'members.unblock': 'Unblock',
     'members.pending': 'Pending: {{details}}',
+    'members.approve': 'Approve',
     'members.pendingCount': '{{count}} pending',
     'myUnit.pending': 'Waiting for building management to confirm: {{details}}',
     'myUnit.setByManagement': 'Apartments and payment details are set by building management.',
@@ -626,6 +632,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.saveError': 'לא הצלחנו לשמור את הבניין. נסו שוב.',
     'admin.duplicateError': 'כבר קיים בניין בכתובת הזו בעיר הזו.',
     'admin.passwordKeep': 'סיסמה חדשה (השאירו ריק כדי לשמור את הנוכחית)',
+    'admin.identityAdminOnly': 'רק מנהל מערכת יכול לשנות שם, עיר וכתובת',
     'admin.fieldName': 'שם',
     'admin.fieldCity': 'עיר',
     'admin.fieldAddress': 'כתובת',
@@ -699,9 +706,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'theme.system': 'לפי המערכת',
     'userMenu.profile': 'עריכת פרופיל',
     'userMenu.preferences': 'העדפות אפליקציה',
-    'userMenu.viewAsResident': 'תצוגת דייר/ת',
-    'userMenu.viewAsResidentHint': 'לראות את buildy כמו הדיירים',
-    'dashboard.viewingAsResident': 'את/ה צופה ב-buildy כדייר/ת — כלי הניהול מוסתרים.',
+    'adminFab.viewAs': 'תצוגה בתור',
+    'adminFab.viewAsHint': 'לראות את buildy בתור אחד מהתפקידים',
+    'adminFab.roleAdmin': 'מנהל מערכת (גישה מלאה)',
+    'dashboard.viewingAs': 'את/ה צופה ב-buildy בתור {{role}} — כלי הניהול מוסתרים.',
     'dashboard.switchBackToAdmin': 'חזרה לתצוגת מנהל',
     'docs.noPreview': 'אין תצוגה מקדימה לסוג קובץ זה — הורידו אותו כדי לפתוח.',
     'docs.download': 'הורדה',
@@ -746,6 +754,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.blockedBy': 'נחסם/ה על ידי {{name}}',
     'members.unblock': 'ביטול חסימה',
     'members.pending': 'ממתין: {{details}}',
+    'members.approve': 'אישור',
     'members.pendingCount': '{{count}} ממתינים',
     'myUnit.pending': 'ממתין לאישור הנהלת הבניין: {{details}}',
     'myUnit.setByManagement': 'הדירות ופרטי התשלום נקבעים על ידי הנהלת הבניין.',
@@ -884,6 +893,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.saveError': 'تعذّر حفظ المبنى. يرجى المحاولة مرة أخرى.',
     'admin.duplicateError': 'يوجد مبنى بهذا العنوان في هذه المدينة بالفعل.',
     'admin.passwordKeep': 'كلمة مرور جديدة (اتركها فارغة للإبقاء على الحالية)',
+    'admin.identityAdminOnly': 'يمكن للمسؤول فقط تغيير الاسم والمدينة والعنوان',
     'admin.fieldName': 'الاسم',
     'admin.fieldCity': 'المدينة',
     'admin.fieldAddress': 'العنوان',
@@ -957,9 +967,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'theme.system': 'حسب النظام',
     'userMenu.profile': 'تعديل الملف الشخصي',
     'userMenu.preferences': 'تفضيلات التطبيق',
-    'userMenu.viewAsResident': 'العرض كساكن',
-    'userMenu.viewAsResidentHint': 'شاهد buildy كما يراه السكان',
-    'dashboard.viewingAsResident': 'أنت تشاهد buildy كساكن — أدوات الإدارة مخفية.',
+    'adminFab.viewAs': 'العرض بصفة',
+    'adminFab.viewAsHint': 'معاينة buildy بأحد هذه الأدوار',
+    'adminFab.roleAdmin': 'مسؤول (وصول كامل)',
+    'dashboard.viewingAs': 'أنت تشاهد buildy بصفة {{role}} — أدوات الإدارة مخفية.',
     'dashboard.switchBackToAdmin': 'العودة إلى وضع المسؤول',
     'docs.noPreview': 'لا تتوفر معاينة لهذا النوع من الملفات — نزّله لفتحه.',
     'docs.download': 'تنزيل',
@@ -1004,6 +1015,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.blockedBy': 'حظره {{name}}',
     'members.unblock': 'إلغاء الحظر',
     'members.pending': 'قيد الانتظار: {{details}}',
+    'members.approve': 'موافقة',
     'members.pendingCount': '{{count}} قيد الانتظار',
     'myUnit.pending': 'بانتظار تأكيد إدارة المبنى: {{details}}',
     'myUnit.setByManagement': 'تحدد إدارة المبنى الشقق وتفاصيل الدفع.',
@@ -1144,6 +1156,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.saveError': 'Не удалось сохранить дом. Попробуйте ещё раз.',
     'admin.duplicateError': 'Дом с таким адресом в этом городе уже существует.',
     'admin.passwordKeep': 'Новый пароль (оставьте пустым, чтобы сохранить текущий)',
+    'admin.identityAdminOnly': 'Название, город и адрес может изменить только администратор',
     'admin.fieldName': 'Название',
     'admin.fieldCity': 'Город',
     'admin.fieldAddress': 'Адрес',
@@ -1217,9 +1230,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'theme.system': 'Как в системе',
     'userMenu.profile': 'Редактировать профиль',
     'userMenu.preferences': 'Настройки приложения',
-    'userMenu.viewAsResident': 'Режим жильца',
-    'userMenu.viewAsResidentHint': 'Смотреть buildy глазами жильцов',
-    'dashboard.viewingAsResident': 'Вы просматриваете buildy как жилец — инструменты администратора скрыты.',
+    'adminFab.viewAs': 'Смотреть как',
+    'adminFab.viewAsHint': 'Просмотр buildy в одной из этих ролей',
+    'adminFab.roleAdmin': 'Администратор (полный доступ)',
+    'dashboard.viewingAs': 'Вы просматриваете buildy в роли «{{role}}» — инструменты администратора скрыты.',
     'dashboard.switchBackToAdmin': 'Вернуться в режим администратора',
     'docs.noPreview': 'Для этого типа файла нет предпросмотра — скачайте его, чтобы открыть.',
     'docs.download': 'Скачать',
@@ -1264,6 +1278,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.blockedBy': 'Заблокировал(а): {{name}}',
     'members.unblock': 'Разблокировать',
     'members.pending': 'Ожидает: {{details}}',
+    'members.approve': 'Одобрить',
     'members.pendingCount': 'Ожидают: {{count}}',
     'myUnit.pending': 'Ожидает подтверждения управления дома: {{details}}',
     'myUnit.setByManagement': 'Квартиры и данные об оплате задаёт управление дома.',
@@ -1405,6 +1420,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.saveError': "Impossible d'enregistrer l'immeuble. Veuillez réessayer.",
     'admin.duplicateError': 'Un immeuble avec cette adresse existe déjà dans cette ville.',
     'admin.passwordKeep': 'Nouveau mot de passe (laisser vide pour conserver l’actuel)',
+    'admin.identityAdminOnly': 'Seul un administrateur peut modifier le nom, la ville et l’adresse',
     'admin.fieldName': 'Nom',
     'admin.fieldCity': 'Ville',
     'admin.fieldAddress': 'Adresse',
@@ -1478,9 +1494,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'theme.system': 'Système',
     'userMenu.profile': 'Modifier le profil',
     'userMenu.preferences': "Préférences de l'application",
-    'userMenu.viewAsResident': 'Voir en tant que résident',
-    'userMenu.viewAsResidentHint': 'Voir buildy comme les résidents',
-    'dashboard.viewingAsResident': "Vous voyez buildy en tant que résident — les outils d'administration sont masqués.",
+    'adminFab.viewAs': 'Voir en tant que',
+    'adminFab.viewAsHint': 'Prévisualiser buildy avec l’un de ces rôles',
+    'adminFab.roleAdmin': 'Administrateur (accès complet)',
+    'dashboard.viewingAs': "Vous voyez buildy en tant que {{role}} — les outils d'administration sont masqués.",
     'dashboard.switchBackToAdmin': 'Revenir en mode administrateur',
     'docs.noPreview': "Pas d'aperçu pour ce type de fichier — téléchargez-le pour l'ouvrir.",
     'docs.download': 'Télécharger',
@@ -1525,6 +1542,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.blockedBy': 'Bloqué par {{name}}',
     'members.unblock': 'Débloquer',
     'members.pending': 'En attente : {{details}}',
+    'members.approve': 'Approuver',
     'members.pendingCount': '{{count}} en attente',
     'myUnit.pending': "En attente de confirmation par la gestion de l'immeuble : {{details}}",
     'myUnit.setByManagement': "Les appartements et les détails de paiement sont définis par la gestion de l'immeuble.",
@@ -1665,6 +1683,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.saveError': 'No se pudo guardar el edificio. Inténtalo de nuevo.',
     'admin.duplicateError': 'Ya existe un edificio con esta dirección en esta ciudad.',
     'admin.passwordKeep': 'Nueva contraseña (déjala vacía para mantener la actual)',
+    'admin.identityAdminOnly': 'El nombre, la ciudad y la dirección solo los puede cambiar un administrador',
     'admin.fieldName': 'Nombre',
     'admin.fieldCity': 'Ciudad',
     'admin.fieldAddress': 'Dirección',
@@ -1738,9 +1757,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'theme.system': 'Sistema',
     'userMenu.profile': 'Editar perfil',
     'userMenu.preferences': 'Preferencias de la app',
-    'userMenu.viewAsResident': 'Ver como residente',
-    'userMenu.viewAsResidentHint': 'Ver buildy como lo ven los residentes',
-    'dashboard.viewingAsResident': 'Estás viendo buildy como residente: las herramientas de administración están ocultas.',
+    'adminFab.viewAs': 'Ver como',
+    'adminFab.viewAsHint': 'Previsualizar buildy con uno de estos roles',
+    'adminFab.roleAdmin': 'Administrador (acceso completo)',
+    'dashboard.viewingAs': 'Estás viendo buildy como {{role}}: las herramientas de administración están ocultas.',
     'dashboard.switchBackToAdmin': 'Volver al modo administrador',
     'docs.noPreview': 'No hay vista previa para este tipo de archivo: descárgalo para abrirlo.',
     'docs.download': 'Descargar',
@@ -1785,6 +1805,7 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.blockedBy': 'Bloqueado por {{name}}',
     'members.unblock': 'Desbloquear',
     'members.pending': 'Pendiente: {{details}}',
+    'members.approve': 'Aprobar',
     'members.pendingCount': '{{count}} pendientes',
     'myUnit.pending': 'Esperando la confirmación de la administración del edificio: {{details}}',
     'myUnit.setByManagement': 'La administración del edificio define los apartamentos y los datos de pago.',

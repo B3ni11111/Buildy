@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -7,21 +7,16 @@ import {
   CardContent,
   Chip,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
-import { Responsive, useContainerWidth, type Layout, type ResponsiveLayouts } from 'react-grid-layout';
+import { Responsive, useContainerWidth, type Layout, type LayoutItem, type ResponsiveLayouts } from 'react-grid-layout';
 import { gridBounds, minMaxSize } from 'react-grid-layout/core';
 import { GridBackground } from 'react-grid-layout/extras';
 import 'react-grid-layout/css/styles.css';
@@ -46,9 +41,10 @@ import MyApartmentsCard from './MyApartmentsCard';
 import MembersCard from './MembersCard';
 import DocumentsCard from './DocumentsCard';
 import AccountSetup from './AccountSetup';
+import EditBuildingDialog from './EditBuildingDialog';
 import type { SettingsSection } from './Settings';
 import { OnboardingData } from '../types/onboarding';
-import { Building, ContactLink, ContactType, CurrentUser, MessageType } from '../types/building';
+import { Building, BuildingRole, City, ContactLink, ContactType, CurrentUser, MessageType } from '../types/building';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
@@ -63,8 +59,9 @@ import {
   loadLayouts,
   resetLayouts,
   saveLayouts,
-  setLayoutEditing,
   DEFAULT_LAYOUTS,
+  fillGapsCompactor,
+  mirrorLayouts,
 } from '../utils/homeLayout';
 
 const CONTACT_ICON: Record<ContactType, typeof WhatsAppIcon> = {
@@ -156,92 +153,6 @@ function BuildingSwitcher({
   );
 }
 
-/** Building management edits description, door code and join password (name/address stay admin-only). */
-function BuildingDetailsDialog({
-  building,
-  idToken,
-  onClose,
-  onSaved,
-}: {
-  building: Building;
-  idToken: string;
-  onClose: () => void;
-  onSaved: (building: Building) => void;
-}) {
-  const { t } = useLanguage();
-  const [description, setDescription] = useState(building.description ?? '');
-  const [entryCode, setEntryCode] = useState(building.entryCode ?? '');
-  const [password, setPassword] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const valid = password === '' || password.length >= 4;
-
-  const save = async () => {
-    if (!valid || saving) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await api.manage.updateDetails(idToken, building.id, {
-        description: description.trim() || null,
-        entryCode: entryCode.trim() || null,
-        ...(password ? { password } : {}),
-      });
-      onSaved(updated);
-    } catch {
-      setError(t('admin.saveError'));
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
-      <DialogTitle sx={{ fontWeight: 700 }}>{t('dashboard.editDetails')}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2.5} sx={{ mt: 1 }}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label={t('admin.fieldDescription')}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label={t('dashboard.entryCode')}
-            value={entryCode}
-            onChange={(e) => setEntryCode(e.target.value)}
-            slotProps={{ htmlInput: { maxLength: 20, dir: 'ltr' } }}
-          />
-          <TextField
-            fullWidth
-            type="password"
-            label={t('admin.passwordKeep')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={!valid}
-            helperText={!valid ? t('wizard.password.placeholder') : undefined}
-          />
-          {error && <Alert severity="error">{error}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} sx={{ textTransform: 'none' }}>
-          {t('common.cancel')}
-        </Button>
-        <Button
-          variant="contained"
-          disabled={!valid || saving}
-          onClick={save}
-          sx={{ textTransform: 'none', fontWeight: 600 }}
-        >
-          {t('common.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 function BuildingTile({ building, onEdit }: { building: Building; onEdit?: () => void }) {
   const { t } = useLanguage();
   return (
@@ -325,7 +236,7 @@ interface DashboardProps {
   onJoinAnother: () => void;
   onOpenSettings: (section: SettingsSection) => void;
   /** Present only for real admins: drives the "viewing as a resident" banner. */
-  adminView?: { viewAsResident: boolean; onToggle: () => void };
+  adminView?: { viewAs: BuildingRole | null; onExit: () => void };
   onBuildingChange: (building: Building) => void;
   /** Refetch buildings (e.g. member count after management changes membership). */
   onBuildingRefresh: () => void;
@@ -347,7 +258,7 @@ export default function Dashboard({
   currentUser,
   onCurrentUserChange,
 }: DashboardProps) {
-  const { t } = useLanguage();
+  const { t, dir } = useLanguage();
   const { user } = useAuth();
   const firstName = profile.name.split(' ')[0];
   // Layouts are per user, on this device — keyed by the Cognito sub.
@@ -358,10 +269,29 @@ export default function Dashboard({
   const [uploadOpen, setUploadOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
+  // Admins (not previewing a role) edit the building's name, city and address too.
+  const isAdmin = !!currentUser?.isAdmin;
+  const [cities, setCities] = useState<City[]>([]);
+
+  useEffect(() => {
+    if (!editingDetails || !isAdmin || cities.length) return;
+    let cancelled = false;
+    api
+      .listCities(idToken)
+      .then((list) => {
+        if (!cancelled) setCities(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [editingDetails, isAdmin, cities.length, idToken]);
 
   // Home grid: one layout per user for all buildings; editing is switched on in Settings.
   const [layouts, setLayouts] = useState<ResponsiveLayouts>(() => loadLayouts(userKey));
-  const [editing, setEditing] = useState(getLayoutEditing);
+  const [editing] = useState(getLayoutEditing);
+  // The Reset / Done bar only shows once the user has actually moved or resized a tile.
+  const [layoutChanged, setLayoutChanged] = useState(false);
   const [breakpoint, setBreakpoint] = useState<string>('lg');
   const { width, containerRef, mounted } = useContainerWidth();
   const canEdit = editing && breakpoint !== 'sm';
@@ -375,20 +305,43 @@ export default function Dashboard({
   const gridRows = currentLayout.reduce((max, item) => Math.max(max, item.y + item.h), 0) + (interacting ? 2 : 0);
   const cols = COLS[breakpoint as keyof typeof COLS] ?? COLS.lg;
 
-  const onLayoutChange = (_layout: Layout, all: ResponsiveLayouts) => {
+  // The grid library is LTR-only: RTL shows a mirrored copy; `layouts` itself always stays LTR.
+  const rtl = dir === 'rtl';
+  const shownLayouts = useMemo(() => (rtl ? mirrorLayouts(layouts) : layouts), [layouts, rtl]);
+  const compactor = useMemo(() => fillGapsCompactor(rtl), [rtl]);
+
+  const onLayoutChange = (_layout: Layout, shown: ResponsiveLayouts) => {
+    const all = rtl ? mirrorLayouts(shown) : shown;
     setLayouts(all);
     // Only remember changes the user made while editing (not breakpoint re-flows).
     if (canEdit) saveLayouts(userKey, all);
   };
 
-  const stopEditing = () => {
-    setLayoutEditing(false);
-    setEditing(false);
+  // Dragging across the page shouldn't select text.
+  useEffect(() => {
+    if (!interacting) return;
+    const previous = document.body.style.userSelect;
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.body.style.userSelect = previous;
+    };
+  }, [interacting]);
+
+  const onInteractionStop = (_layout: Layout, oldItem: LayoutItem | null, newItem: LayoutItem | null) => {
+    setInteracting(false);
+    if (
+      oldItem &&
+      newItem &&
+      (oldItem.x !== newItem.x || oldItem.y !== newItem.y || oldItem.w !== newItem.w || oldItem.h !== newItem.h)
+    ) {
+      setLayoutChanged(true);
+    }
   };
 
   const resetLayout = () => {
     resetLayouts(userKey);
     setLayouts(DEFAULT_LAYOUTS);
+    setLayoutChanged(false);
   };
 
   const quickActions = [
@@ -416,45 +369,6 @@ export default function Dashboard({
 
   const tiles: Record<TileId, React.ReactNode> = useMemo(
     () => ({
-      actions: (
-        <Card variant="outlined" sx={{ borderRadius: TILE_RADIUS }}>
-          <CardContent
-            sx={{
-              p: 2,
-              '&:last-child': { pb: 2 },
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Stack direction="row" sx={{ gap: 1.5, flexWrap: 'wrap' }}>
-              {quickActions.map(({ label, icon: Icon, onClick }) => (
-                <Button
-                  key={label}
-                  variant="outlined"
-                  startIcon={<Icon />}
-                  onClick={onClick}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 500,
-                    borderRadius: 3,
-                    bgcolor: 'background.paper',
-                    borderColor: 'divider',
-                    color: 'text.primary',
-                    py: 1,
-                    px: 2,
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      bgcolor: 'background.paper',
-                    },
-                  }}
-                >
-                  {label}
-                </Button>
-              ))}
-            </Stack>
-          </CardContent>
-        </Card>
-      ),
       building: (
         <BuildingTile building={building} onEdit={building.canManage ? () => setEditingDetails(true) : undefined} />
       ),
@@ -492,22 +406,24 @@ export default function Dashboard({
         />
       ),
     }),
-    // quickActions only closes over stable setters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [building, idToken, currentUser, membersOpen, composeType, uploadOpen, onBuildingRefresh, t],
   );
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <Box
+        component="header"
         sx={{
+          position: 'sticky',
+          top: 0,
+          zIndex: (theme) => theme.zIndex.appBar,
           borderBottom: '1px solid',
           borderColor: 'divider',
           bgcolor: 'background.paper',
         }}
       >
         <Container maxWidth="xl">
-          <Stack direction="row" sx={{ py: 1.25, alignItems: 'center', gap: 2, pr: 7 }}>
+          <Stack direction="row" sx={{ py: 1.25, alignItems: 'center', gap: 2 }}>
             <Typography
               sx={{
                 fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
@@ -524,28 +440,28 @@ export default function Dashboard({
               onSelect={onSelectBuilding}
               onJoinAnother={onJoinAnother}
             />
+            <Box sx={{ flex: 1 }} />
+            <UserInfo
+              currentUser={currentUser}
+              onEditProfile={() => onOpenSettings('profile')}
+              onOpenPreferences={() => onOpenSettings('preferences')}
+            />
           </Stack>
         </Container>
       </Box>
 
-      <UserInfo
-        currentUser={currentUser}
-        onEditProfile={() => onOpenSettings('profile')}
-        onOpenPreferences={() => onOpenSettings('preferences')}
-      />
-
       <Container maxWidth="xl" sx={{ pt: 4, pb: 12 }}>
-        {adminView?.viewAsResident && (
+        {adminView?.viewAs && (
           <Alert
             severity="info"
             sx={{ mb: 3, borderRadius: 3 }}
             action={
-              <Button color="inherit" size="small" onClick={adminView.onToggle} sx={{ textTransform: 'none' }}>
+              <Button color="inherit" size="small" onClick={adminView.onExit} sx={{ textTransform: 'none' }}>
                 {t('dashboard.switchBackToAdmin')}
               </Button>
             }
           >
-            {t('dashboard.viewingAsResident')}
+            {t('dashboard.viewingAs', { role: t(`role.${adminView.viewAs}`) })}
           </Alert>
         )}
         <AccountSetup
@@ -556,7 +472,7 @@ export default function Dashboard({
           onBuildingChange={onBuildingChange}
           onCurrentUserChange={onCurrentUserChange}
         />
-        {canEdit && (
+        {canEdit && layoutChanged && (
           <Alert
             severity="info"
             icon={<DragIndicatorIcon />}
@@ -570,7 +486,7 @@ export default function Dashboard({
                   color="inherit"
                   size="small"
                   variant="outlined"
-                  onClick={stopEditing}
+                  onClick={() => setLayoutChanged(false)}
                   sx={{ textTransform: 'none' }}
                 >
                   {t('layout.done')}
@@ -597,8 +513,36 @@ export default function Dashboard({
           </Typography>
         </Stack>
 
+        <Stack direction="row" sx={{ gap: 1.5, flexWrap: 'wrap', mb: 3 }}>
+          {quickActions.map(({ label, icon: Icon, onClick }) => (
+            <Button
+              key={label}
+              variant="outlined"
+              startIcon={<Icon />}
+              onClick={onClick}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: 3,
+                bgcolor: 'background.paper',
+                borderColor: 'divider',
+                color: 'text.primary',
+                py: 1,
+                px: 2,
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  bgcolor: 'background.paper',
+                },
+              }}
+            >
+              {label}
+            </Button>
+          ))}
+        </Stack>
+
         <Box
           ref={containerRef}
+          dir="ltr"
           sx={(theme) => ({
             position: 'relative',
             // Where the tile will land: filled cells with the same corners as the tiles.
@@ -661,7 +605,8 @@ export default function Dashboard({
           {mounted && (
             <Responsive
               width={width}
-              layouts={layouts}
+              layouts={shownLayouts}
+              compactor={compactor}
               breakpoints={BREAKPOINTS}
               cols={COLS}
               rowHeight={rowHeight}
@@ -669,9 +614,9 @@ export default function Dashboard({
               containerPadding={[0, 0]}
               constraints={[gridBounds, minMaxSize, noStrips]}
               onDragStart={() => setInteracting(true)}
-              onDragStop={() => setInteracting(false)}
+              onDragStop={onInteractionStop}
               onResizeStart={() => setInteracting(true)}
-              onResizeStop={() => setInteracting(false)}
+              onResizeStop={onInteractionStop}
               dragConfig={{
                 enabled: canEdit,
                 bounded: true,
@@ -694,6 +639,7 @@ export default function Dashboard({
                         transform: 'translateX(-50%)',
                         zIndex: 2,
                         cursor: 'grab',
+                        userSelect: 'none',
                         px: 1.5,
                         py: 0.25,
                         borderRadius: 2,
@@ -708,12 +654,14 @@ export default function Dashboard({
                   )}
                   <Box
                     className="tile-body"
+                    dir={dir}
                     sx={
                       canEdit
                         ? {
-                            outline: '1px dashed',
-                            outlineColor: 'divider',
                             borderRadius: `${tileRadiusPx}px`,
+                            outline: '1px dashed transparent',
+                            transition: 'outline-color 0.15s ease',
+                            '.react-grid-item:hover > &': { outlineColor: (theme) => theme.palette.divider },
                           }
                         : undefined
                     }
@@ -728,14 +676,37 @@ export default function Dashboard({
       </Container>
 
       {editingDetails && (
-        <BuildingDetailsDialog
+        <EditBuildingDialog
           building={building}
-          idToken={idToken}
+          canEditIdentity={isAdmin}
+          cities={cities}
           onClose={() => setEditingDetails(false)}
-          onSaved={(updated) => {
+          onSave={async (fields) => {
+            if (isAdmin) {
+              await api.admin.updateBuilding(idToken, building.id, {
+                name: fields.name!,
+                cityId: fields.cityId!,
+                address: fields.address!,
+                description: fields.description,
+                entryCode: fields.entryCode,
+                ...(fields.password ? { password: fields.password } : {}),
+              });
+              onBuildingRefresh();
+            } else {
+              onBuildingChange(await api.manage.updateDetails(idToken, building.id, fields));
+            }
             setEditingDetails(false);
-            onBuildingChange(updated);
           }}
+          onAddLink={(input) =>
+            isAdmin
+              ? api.admin.addContactLink(idToken, building.id, input)
+              : api.manage.addContactLink(idToken, building.id, input)
+          }
+          onRemoveLink={async (link) => {
+            if (isAdmin) await api.admin.removeContactLink(idToken, link.id);
+            else await api.manage.removeContactLink(idToken, building.id, link.id);
+          }}
+          onContactLinksChange={(contactLinks) => onBuildingChange({ ...building, contactLinks })}
         />
       )}
     </Box>

@@ -30,6 +30,7 @@ export function toCurrentUser(user: User) {
     name: user.name,
     phone: user.phoneNum,
     isAdmin: user.isAdmin,
+    onboarded: user.onboardedAt !== null,
     language: user.language,
     picture: { google: user.googlePicture, version: avatarVersion(user.avatarSrc) },
   };

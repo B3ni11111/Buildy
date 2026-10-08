@@ -34,7 +34,7 @@ export default function UserInfo({ currentUser, onEditProfile, onOpenPreferences
   if (!user) return null;
 
   const close = () => setAnchorEl(null);
-  const displayName = currentUser?.name || user.name || 'User';
+  const displayName = currentUser?.name || user.name || user.email || t('members.unnamed');
   const picture: Picture = currentUser?.picture ?? { google: user.picture ?? null, version: null };
   const closeThen = (action?: () => void) => () => {
     action?.();
@@ -44,12 +44,12 @@ export default function UserInfo({ currentUser, onEditProfile, onOpenPreferences
   const edgeSide = dir === 'rtl' ? 'left' : 'right';
 
   return (
-    <Box sx={{ position: 'fixed', top: 16, insetInlineEnd: 16, zIndex: 1000 }}>
+    <Box sx={{ display: 'flex' }}>
       <IconButton
         onClick={(event) => setAnchorEl(event.currentTarget)}
         sx={{ p: 0, '&:hover': { transform: 'scale(1.05)' } }}
       >
-        <UserAvatar userId={currentUser?.id ?? user.sub} name={displayName} picture={picture} size={40} sx={{ boxShadow: 2 }} />
+        <UserAvatar userId={currentUser?.id ?? user.sub} name={displayName} picture={picture} size={36} />
       </IconButton>
 
       <Menu
@@ -65,7 +65,7 @@ export default function UserInfo({ currentUser, onEditProfile, onOpenPreferences
             <UserAvatar userId={currentUser?.id ?? user.sub} name={displayName} picture={picture} size={40} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user.name || 'User'}
+                {displayName}
               </Typography>
               <Typography
                 variant="caption"
