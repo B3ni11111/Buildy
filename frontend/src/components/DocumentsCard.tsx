@@ -21,44 +21,21 @@ import {
   Typography,
 } from '@mui/material';
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
-import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
-import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
-import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
-import SlideshowOutlinedIcon from '@mui/icons-material/SlideshowOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import FilePreview from './FilePreview';
+import { Thumb } from './IssueThumbs';
 import FileViewerDialog from './FileViewerDialog';
+import { FILE_ACCEPT, MAX_UPLOAD_BYTES, fileIcon, formatSize, saveBlob } from '../utils/files';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ApiError, api } from '../utils/api';
 import { CurrentUser, Doc } from '../types/building';
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
-
-function fileIcon(mimeType: string) {
-  if (mimeType === 'application/pdf') return PictureAsPdfOutlinedIcon;
-  if (mimeType.startsWith('image/')) return ImageOutlinedIcon;
-  if (mimeType.includes('sheet') || mimeType.includes('excel')) return TableChartOutlinedIcon;
-  if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return SlideshowOutlinedIcon;
-  return DescriptionOutlinedIcon;
-}
-
-/** Saves a blob to the user's device under the given file name. */
-function saveBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
-
-function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+interface Pending {
+  key: number;
+  file: File;
+  title: string;
+  error: string | null;
 }
 
 interface DocumentsCardProps {
@@ -81,8 +58,10 @@ export default function DocumentsCard({
   const [docs, setDocs] = useState<Doc[] | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
+  // Several documents can be uploaded at once: each has its own title and shows its own error.
+  const [pending, setPending] = useState<Pending[]>([]);
+  const [previewKey, setPreviewKey] = useState<number | null>(null);
+  const nextKey = useRef(0);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -114,32 +93,51 @@ export default function DocumentsCard({
 
   const closeUpload = () => {
     onUploadOpenChange(false);
-    setFile(null);
-    setTitle('');
+    setPending([]);
+    setPreviewKey(null);
     setUploadError(null);
   };
 
-  const pickFile = (picked: File | undefined) => {
-    if (!picked) return;
-    setUploadError(picked.size > MAX_UPLOAD_BYTES ? t('docs.tooLarge') : null);
-    setFile(picked);
-    if (!title) setTitle(picked.name.replace(/\.[^.]+$/, ''));
+  const pickFiles = (picked: File[]) => {
+    if (picked.length === 0) return;
+    const added = picked.map((file) => ({
+      key: nextKey.current++,
+      file,
+      title: file.name.replace(/\.[^.]+$/, ''),
+      error: file.size > MAX_UPLOAD_BYTES ? t('docs.tooLarge') : null,
+    }));
+    setPending((current) => [...current, ...added]);
+    setPreviewKey((current) => current ?? added[0].key);
+    setUploadError(null);
   };
+
+  const removePending = (key: number) => {
+    setPending((current) => current.filter((item) => item.key !== key));
+    setPreviewKey((current) => (current === key ? null : current));
+  };
+
+  const previewing = pending.find((item) => item.key === previewKey);
+  const uploadable = pending.filter((item) => item.file.size <= MAX_UPLOAD_BYTES);
 
   const handleUpload = async () => {
-    if (!file || file.size > MAX_UPLOAD_BYTES || uploading) return;
+    if (uploadable.length === 0 || uploading) return;
     setUploading(true);
     setUploadError(null);
-    try {
-      const doc = await api.uploadDoc(idToken, buildingId, file, title.trim());
-      setDocs((prev) => [doc, ...(prev ?? [])]);
-      closeUpload();
-    } catch (err) {
-      const status = err instanceof ApiError ? err.status : 0;
-      setUploadError(t(status === 413 ? 'docs.tooLarge' : status === 400 ? 'docs.badType' : 'docs.uploadError'));
-    } finally {
-      setUploading(false);
+    // One after the other; the ones that go through leave the list, the others stay with their error.
+    const failed = new Map<number, string>();
+    for (const item of uploadable) {
+      try {
+        const doc = await api.uploadDoc(idToken, buildingId, item.file, item.title.trim());
+        setDocs((prev) => [doc, ...(prev ?? [])]);
+        setPending((current) => current.filter((p) => p.key !== item.key));
+      } catch (err) {
+        const status = err instanceof ApiError ? err.status : 0;
+        failed.set(item.key, t(status === 413 ? 'docs.tooLarge' : status === 400 ? 'docs.badType' : 'docs.uploadError'));
+      }
     }
+    setUploading(false);
+    if (failed.size === 0) closeUpload();
+    else setPending((current) => current.map((item) => (failed.has(item.key) ? { ...item, error: failed.get(item.key)! } : item)));
   };
 
   const openViewer = async (doc: Doc) => {
@@ -183,7 +181,7 @@ export default function DocumentsCard({
     <>
       <Card variant="outlined" sx={{ borderRadius: 4, height: '100%' }}>
         <CardContent sx={{ p: 3 }}>
-          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Stack className="tile-header" direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('docs.title')}
             </Typography>
@@ -207,6 +205,7 @@ export default function DocumentsCard({
               return (
                 <ListItem
                   key={doc.id}
+                  className="doc-row"
                   disablePadding
                   sx={{ borderTop: idx === 0 ? 'none' : '1px solid', borderColor: 'divider' }}
                   secondaryAction={
@@ -239,10 +238,14 @@ export default function DocumentsCard({
                 >
                   <ListItemButton
                     onClick={() => openViewer(doc)}
-                    sx={{ px: 0.5, py: 1.25, pr: canModify(doc) ? 10 : 0.5, borderRadius: 2 }}
+                    sx={{ px: 0.5, py: 1.25, paddingInlineEnd: canModify(doc) ? 'var(--doc-actions, 80px)' : '4px', borderRadius: 2 }}
                   >
-                    <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
-                      <Icon />
+                    <ListItemIcon sx={{ minWidth: 52, color: 'primary.main' }}>
+                      {doc.mimeType.startsWith('image/') ? (
+                        <Thumb idToken={idToken} id={doc.id} name={doc.title} size={40} kind="doc" />
+                      ) : (
+                        <Icon />
+                      )}
                     </ListItemIcon>
                     <ListItemText
                       primary={doc.title}
@@ -259,19 +262,28 @@ export default function DocumentsCard({
         </CardContent>
       </Card>
 
-      <Dialog open={uploadOpen} onClose={closeUpload} maxWidth={file ? 'sm' : 'xs'} fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
+      <Dialog open={uploadOpen} onClose={closeUpload} maxWidth={pending.length ? 'sm' : 'xs'} fullWidth slotProps={{ paper: { sx: { borderRadius: 4 } } }}>
         <DialogTitle sx={{ fontWeight: 700 }}>{t('docs.uploadTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             <input
               ref={fileInput}
               type="file"
-              accept={ACCEPT}
+              accept={FILE_ACCEPT}
+              multiple
               hidden
-              onChange={(e) => pickFile(e.target.files?.[0])}
+              onChange={(e) => {
+                pickFiles([...(e.target.files ?? [])]);
+                e.target.value = '';
+              }}
             />
             <Box
               onClick={() => fileInput.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                pickFiles([...e.dataTransfer.files]);
+              }}
               sx={{
                 border: '1.5px dashed',
                 borderColor: 'divider',
@@ -283,12 +295,54 @@ export default function DocumentsCard({
               }}
             >
               <FileUploadOutlinedIcon color="primary" />
-              <Typography sx={{ fontWeight: 500 }}>{file ? file.name : t('docs.chooseFile')}</Typography>
+              <Typography sx={{ fontWeight: 500 }}>{pending.length ? t('docs.addMore') : t('docs.chooseFiles')}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {file ? formatSize(file.size) : t('docs.fileHint')}
+                {t('docs.fileHint')}
               </Typography>
             </Box>
-            {file && (
+            {pending.length > 0 && (
+              <Stack spacing={1}>
+                {pending.map((item) => {
+                  const Icon = fileIcon(item.file.type);
+                  return (
+                    <Box
+                      key={item.key}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: item.error ? 'error.main' : previewKey === item.key ? 'primary.main' : 'divider',
+                        borderRadius: 3,
+                        p: 1,
+                      }}
+                    >
+                      <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+                        <IconButton size="small" onClick={() => setPreviewKey(previewKey === item.key ? null : item.key)} aria-label={item.file.name}>
+                          <Icon fontSize="small" color="primary" />
+                        </IconButton>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          label={t('docs.titleLabel')}
+                          value={item.title}
+                          onChange={(e) => setPending((current) => current.map((p) => (p.key === item.key ? { ...p, title: e.target.value } : p)))}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                          {formatSize(item.file.size)}
+                        </Typography>
+                        <IconButton size="small" onClick={() => removePending(item.key)} aria-label={t('common.delete')} disabled={uploading}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                      {item.error && (
+                        <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5, ml: 1 }}>
+                          {item.file.name} — {item.error}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            )}
+            {previewing && (
               <Box
                 sx={{
                   height: 280,
@@ -299,10 +353,9 @@ export default function DocumentsCard({
                   bgcolor: 'background.default',
                 }}
               >
-                <FilePreview blob={file} mimeType={file.type} title={file.name} />
+                <FilePreview blob={previewing.file} mimeType={previewing.file.type} title={previewing.file.name} />
               </Box>
             )}
-            <TextField fullWidth label={t('docs.titleLabel')} value={title} onChange={(e) => setTitle(e.target.value)} />
             {uploadError && <Alert severity="error">{uploadError}</Alert>}
           </Stack>
         </DialogContent>
@@ -312,11 +365,11 @@ export default function DocumentsCard({
           </Button>
           <Button
             variant="contained"
-            disabled={!file || file.size > MAX_UPLOAD_BYTES || uploading}
+            disabled={uploadable.length === 0 || uploading}
             onClick={handleUpload}
             sx={{ textTransform: 'none', fontWeight: 600 }}
           >
-            {t('docs.upload')}
+            {uploadable.length > 1 ? t('docs.uploadCount', { count: uploadable.length }) : t('docs.upload')}
           </Button>
         </DialogActions>
       </Dialog>

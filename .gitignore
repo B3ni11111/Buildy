@@ -24,3 +24,13 @@ amplifyconfiguration*
 
 # Uploaded documents (bare-metal backend runs)
 backend/uploads/
+
+# Studio: motion graphics + soundtracks working dir (local only)
+studio/
+
+# Playwright MCP snapshots, screenshots and console logs (local testing)
+.playwright-mcp/
+
+# Playwright test suite outputs (e2e/)
+e2e/test-results/
+e2e/playwright-report/

@@ -1,15 +1,16 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsEnum,
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
-  MinLength,
   ValidateNested,
 } from 'class-validator';
 import { PaymentMethod, RelationType } from '@prisma/client';
@@ -60,21 +61,39 @@ export class UpdateBuildingDetailsDto {
   @IsString()
   @MaxLength(20)
   entryCode?: string | null;
-
-  /** Omit to keep the current join password. */
-  @IsOptional()
-  @IsString()
-  @MinLength(4)
-  password?: string;
 }
 
-/** A member's own suggestion (apartment + owner/renter) — building management confirms it. */
-export class MyRequestDto {
-  @IsInt()
-  @Min(1)
-  @Max(32767)
-  apartment!: number;
+/** One person management adds by their user ID, with at least one apartment. */
+export class ResidentEntryDto {
+  @IsUUID()
+  userId!: string;
 
-  @IsEnum(RelationType)
-  relationType!: RelationType;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => ApartmentEntryDto)
+  apartments!: ApartmentEntryDto[];
+}
+
+/** Bulk add: everyone from one pasted list at once. */
+export class AddMembersDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => ResidentEntryDto)
+  residents!: ResidentEntryDto[];
+}
+
+/** IDs pulled out of the pasted text; with `buildingId` (management only) flags existing/blocked members. */
+export class PreviewUsersDto {
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsUUID(undefined, { each: true })
+  ids!: string[];
+
+  @IsOptional()
+  @IsUUID()
+  buildingId?: string;
 }

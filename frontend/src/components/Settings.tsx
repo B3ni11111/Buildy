@@ -12,17 +12,20 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
+  IconButton,
   MenuItem,
   Stack,
   Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -58,15 +61,16 @@ interface SettingsProps {
   onCurrentUserChange: (user: CurrentUser) => void;
   onBack: () => void;
   /** The building "Leave building" applies to (the one on the home screen). */
-  buildingName: string;
-  onLeaveBuilding: () => void;
+  buildingName?: string;
+  /** Absent while the user isn't in any building. */
+  onLeaveBuilding?: () => void;
   /** Present only for admins. */
   onOpenAdmin?: () => void;
   /** Section to scroll to on open (from the user menu). */
   initialSection?: SettingsSection;
 }
 
-const sectionTitleSx = { fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif', fontWeight: 600 };
+const sectionTitleSx = { fontFamily: '"Rubik", system-ui, sans-serif', fontWeight: 600 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -208,7 +212,7 @@ export default function Settings({
 
   const handleConfirmLeave = () => {
     closeLeaveDialog();
-    onLeaveBuilding();
+    onLeaveBuilding?.();
   };
 
   const BackIcon = dir === 'rtl' ? ArrowForwardIcon : ArrowBackIcon;
@@ -331,13 +335,28 @@ export default function Settings({
                         </Typography>
                       </Field>
                     )}
-                    {user.sub && (
+                    {currentUser && (
                       <Field label={t('settings.userId')}>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}
-                        >
-                          {user.sub}
+                        <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
+                          <Typography
+                            variant="body2"
+                            dir="ltr"
+                            sx={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all', userSelect: 'all' }}
+                          >
+                            {currentUser.id}
+                          </Typography>
+                          <Tooltip title={t('noBuilding.copy')}>
+                            <IconButton
+                              size="small"
+                              aria-label={t('noBuilding.copy')}
+                              onClick={() => navigator.clipboard?.writeText(currentUser.id).catch(() => {})}
+                            >
+                              <ContentCopyOutlinedIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('settings.userIdHint')}
                         </Typography>
                       </Field>
                     )}
@@ -369,6 +388,11 @@ export default function Settings({
                   {LANGUAGE_OPTIONS.map((opt) => (
                     <MenuItem key={opt.code} value={opt.code}>
                       {opt.nativeLabel}
+                      {opt.partial && (
+                        <Typography component="span" variant="body2" color="text.secondary" sx={{ marginInlineStart: 1 }}>
+                          · {t('language.partial')}
+                        </Typography>
+                      )}
                     </MenuItem>
                   ))}
                 </TextField>
@@ -449,24 +473,28 @@ export default function Settings({
                   </>
                 )}
 
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main' }}>
-                    {t('settings.leaveBuildingTitle')} · {buildingName}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {t('settings.leaveBuildingDescription')}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={() => setLeaveOpen(true)}
-                    sx={{ textTransform: 'none', alignSelf: 'flex-start', mt: 1 }}
-                  >
-                    {t('settings.leaveBuildingButton')}
-                  </Button>
-                </Stack>
+                {onLeaveBuilding && (
+                  <>
+                    <Stack spacing={1}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main' }}>
+                        {t('settings.leaveBuildingTitle')} · {buildingName}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('settings.leaveBuildingDescription')}
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => setLeaveOpen(true)}
+                        sx={{ textTransform: 'none', alignSelf: 'flex-start', mt: 1 }}
+                      >
+                        {t('settings.leaveBuildingButton')}
+                      </Button>
+                    </Stack>
 
-                <Divider />
+                    <Divider />
+                  </>
+                )}
 
                 <Stack spacing={1}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'error.main' }}>

@@ -21,11 +21,11 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
-import CheckIcon from '@mui/icons-material/Check';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import UserAvatar from './UserAvatar';
+import AddResidentsDialog from './AddResidentsDialog';
 import { useLanguage } from '../i18n/LanguageContext';
 import { api } from '../utils/api';
 import { useMembers } from '../hooks/useMembers';
@@ -36,15 +36,14 @@ import {
   BuildingRole,
   CurrentUser,
   Member,
+  PAYMENT_METHODS,
   PaymentMethod,
   RelationType,
 } from '../types/building';
 
 // Building management — committee head and management company, on the same level above residents.
 const MANAGEMENT_ROLES: BuildingRole[] = ['committee_head', 'management_company'];
-const RESIDENT_PREVIEW = 5;
 const RELATION_TYPES: RelationType[] = ['owner', 'tenant'];
-const PAYMENT_METHODS: PaymentMethod[] = ['cash', 'transfer', 'bit', 'paybox'];
 
 const ROLE_CHIP: Record<BuildingRole, { color: 'primary' | 'secondary' | 'default'; variant: 'filled' | 'outlined' }> = {
   committee_head: { color: 'primary', variant: 'filled' },
@@ -72,33 +71,16 @@ function MemberRow({
       .filter(Boolean)
       .join(' · '),
   );
-  const request = member.request;
 
   return (
-    <Stack direction="row" sx={{ alignItems: 'center', gap: 1.5, py: 1 }}>
+    <Stack className="member-row" direction="row" sx={{ alignItems: 'center', gap: 1.5, py: 1 }}>
       <UserAvatar userId={member.userId} name={member.name} picture={member.picture} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <Typography sx={{ fontWeight: 500 }} noWrap>
+          <Typography className="member-name" sx={{ fontWeight: 500 }} noWrap>
             {member.name || t('members.unnamed')}
           </Typography>
           {member.userId === currentUser?.id && <Chip label={t('members.you')} size="small" sx={{ height: 20 }} />}
-          {request && (
-            <Chip
-              size="small"
-              color="warning"
-              variant="outlined"
-              sx={{ height: 20 }}
-              label={t('members.pending', {
-                details: [
-                  request.apartment != null ? t('members.apartment', { apartment: request.apartment }) : null,
-                  request.relationType ? t(`relationType.${request.relationType}`) : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · '),
-              })}
-            />
-          )}
         </Stack>
         {apartments.length > 0 && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -162,18 +144,6 @@ function ManageMemberDialog({
         sqrm: a.sqrm?.toString() ?? '',
         paymentMethod: a.paymentMethod ?? '',
       }));
-    }
-    // Start from what they suggested when joining.
-    if (member.request && (member.request.apartment != null || member.request.relationType)) {
-      return [
-        {
-          number: member.request.apartment?.toString() ?? '',
-          relationType: member.request.relationType ?? 'owner',
-          floor: '',
-          sqrm: '',
-          paymentMethod: '',
-        },
-      ];
     }
     return [];
   });
@@ -439,7 +409,7 @@ export function MembersList({
   const { t } = useLanguage();
   const isAdmin = !!currentUser?.isAdmin;
   const [managing, setManaging] = useState<Member | null>(null);
-  const [approving, setApproving] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changeCount, setChangeCount] = useState(0);
 
@@ -461,29 +431,6 @@ export function MembersList({
     }
   };
 
-  /** One click: give them the apartment they asked for (keeping any they already have) and clear the request. */
-  const approve = async (member: Member) => {
-    const request = member.request;
-    if (request?.apartment == null) return;
-    setError(null);
-    setApproving(member.userId);
-    try {
-      // Number + owner/renter only: floor, size and payment of existing apartments stay as they are.
-      const apartments: ApartmentInput[] = [
-        ...member.apartments
-          .filter((a) => a.number !== request.apartment)
-          .map((a) => ({ number: a.number, relationType: a.relationType })),
-        { number: request.apartment, relationType: request.relationType ?? 'owner' },
-      ];
-      await api.manage.setApartments(idToken, buildingId, member.userId, apartments);
-      changed();
-    } catch {
-      setError(t('members.actionError'));
-    } finally {
-      setApproving(null);
-    }
-  };
-
   // Only admins may remove themselves-as-manager, peers or admins; the backend enforces the same.
   const canRemove = (member: Member) =>
     isAdmin || (member.userId !== currentUser?.id && !member.isAdmin && !MANAGEMENT_ROLES.includes(member.role));
@@ -491,19 +438,6 @@ export function MembersList({
   const trailing = (member: Member) =>
     canManage ? (
       <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
-        {member.request?.apartment != null && (
-          <Button
-            size="small"
-            variant="contained"
-            disableElevation
-            startIcon={<CheckIcon />}
-            disabled={approving === member.userId}
-            onClick={() => approve(member)}
-            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
-          >
-            {t('members.approve')}
-          </Button>
-        )}
         {isAdmin ? (
           <TextField
             select
@@ -544,6 +478,15 @@ export function MembersList({
 
   return (
     <Stack spacing={1.5}>
+      {canManage && (
+        <Button
+          startIcon={<AddIcon />}
+          onClick={() => setAddOpen(true)}
+          sx={{ textTransform: 'none', fontWeight: 500, alignSelf: 'flex-start' }}
+        >
+          {t('residents.addButton')}
+        </Button>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       {members.length === 0 && (
         <Typography variant="body2" color="text.secondary">
@@ -553,6 +496,18 @@ export function MembersList({
       {section(t('members.management'), management)}
       {section(t('members.residents'), residents)}
       {canManage && <BlockedList buildingId={buildingId} idToken={idToken} reloadKey={changeCount} />}
+
+      {addOpen && (
+        <AddResidentsDialog
+          buildingId={buildingId}
+          idToken={idToken}
+          onClose={() => setAddOpen(false)}
+          onAdded={() => {
+            setAddOpen(false);
+            changed();
+          }}
+        />
+      )}
 
       {managing && (
         <ManageMemberDialog
@@ -581,7 +536,7 @@ interface MembersCardProps {
   onMembershipChanged: () => void;
 }
 
-/** Dashboard summary: building management (committee head, management company), then the first few residents. */
+/** Dashboard summary: building management (committee head, management company), then the residents (as many as fit; the rest scroll). */
 export default function MembersCard({
   buildingId,
   idToken,
@@ -596,12 +551,12 @@ export default function MembersCard({
 
   const management = (members ?? []).filter((m) => MANAGEMENT_ROLES.includes(m.role));
   const residents = (members ?? []).filter((m) => !MANAGEMENT_ROLES.includes(m.role));
-  const pending = canManage ? (members ?? []).filter((m) => m.request).length : 0;
+  const [addOpen, setAddOpen] = useState(false);
 
   return (
     <Card variant="outlined" sx={{ borderRadius: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ p: 3, flex: 1, overflow: 'auto' }}>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Stack className="tile-header" direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Box>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('members.title')}
@@ -612,14 +567,15 @@ export default function MembersCard({
               </Typography>
             )}
           </Box>
-          <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-            {pending > 0 && (
-              <Chip
-                size="small"
-                color="warning"
-                label={t('members.pendingCount', { count: pending })}
-                onClick={() => onListOpenChange(true)}
-              />
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {canManage && (
+              <Button
+                startIcon={<AddIcon />}
+                onClick={() => setAddOpen(true)}
+                sx={{ textTransform: 'none', fontWeight: 500 }}
+              >
+                {t('residents.addButton')}
+              </Button>
             )}
             <Button onClick={() => onListOpenChange(true)} sx={{ textTransform: 'none', fontWeight: 500 }}>
               {canManage ? t('members.manage') : t('members.viewAll')}
@@ -638,15 +594,24 @@ export default function MembersCard({
           </Box>
         )}
 
-        {residents.slice(0, RESIDENT_PREVIEW).map((member) => (
+        {/* All residents: the card scrolls when small, and shows more the taller the tile is stretched. */}
+        {residents.map((member) => (
           <MemberRow key={member.userId} member={member} currentUser={currentUser} />
         ))}
-        {residents.length > RESIDENT_PREVIEW && (
-          <Button size="small" onClick={() => onListOpenChange(true)} sx={{ textTransform: 'none', mt: 0.5 }}>
-            +{residents.length - RESIDENT_PREVIEW}
-          </Button>
-        )}
       </CardContent>
+
+      {addOpen && (
+        <AddResidentsDialog
+          buildingId={buildingId}
+          idToken={idToken}
+          onClose={() => setAddOpen(false)}
+          onAdded={() => {
+            setAddOpen(false);
+            reload();
+            onMembershipChanged();
+          }}
+        />
+      )}
 
       <Dialog
         open={listOpen}

@@ -21,7 +21,7 @@ export default function SignIn() {
               variant="h2"
               component="h1"
               sx={{
-                fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                fontFamily: '"Rubik", system-ui, sans-serif',
                 fontWeight: 600,
                 mb: 1,
               }}

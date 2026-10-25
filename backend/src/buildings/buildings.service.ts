@@ -1,20 +1,11 @@
-import {
-  ForbiddenException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { compare, hash } from 'bcryptjs';
-import { UserRole } from '@prisma/client';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UsersService, avatarVersion } from '../users/users.service.js';
 import type { AuthUser } from '../auth/auth-user.type.js';
 import { effectiveAdmin, viewedRole } from '../auth/request-context.js';
-import { JoinBuildingDto } from './dto/join-building.dto.js';
-import { MyRequestDto, SetApartmentsDto, UpdateBuildingDetailsDto } from './dto/manage.dto.js';
-import type { ContactLinkDto } from '../admin/dto/building.dto.js';
+import { ApartmentEntryDto, ResidentEntryDto, SetApartmentsDto, UpdateBuildingDetailsDto } from './dto/manage.dto.js';
+import type { ContactLinkDto, CreateBuildingDto } from '../admin/dto/building.dto.js';
 import { normalizeContactLink } from './contact-links.js';
 
 const BUILDING_SUMMARY_SELECT = {
@@ -25,6 +16,7 @@ const BUILDING_SUMMARY_SELECT = {
 } as const;
 
 const APARTMENT_SELECT = {
+  id: true,
   number: true,
   floor: true,
   sqrm: true,
@@ -39,26 +31,15 @@ const APARTMENT_SELECT = {
 export const ROLE_ORDER: UserRole[] = ['committee_head', 'management_company', 'resident'];
 const MANAGEMENT_ROLES: UserRole[] = ['committee_head', 'management_company'];
 
-// Join-password guessing limit: 5 wrong tries per user per building per 15 minutes.
-// In memory — fine for a single backend instance; resets when the backend restarts.
-const JOIN_MAX_FAILURES = 5;
-const JOIN_WINDOW_MS = 15 * 60 * 1000;
-
 const roleOf = (roles: { role: UserRole }[]) =>
   ROLE_ORDER[Math.min(...roles.map((r) => ROLE_ORDER.indexOf(r.role)), ROLE_ORDER.indexOf('resident'))];
 
 @Injectable()
 export class BuildingsService {
-  private readonly joinFailures = new Map<string, { count: number; resetAt: number }>();
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
   ) {}
-
-  list() {
-    return this.prisma.building.findMany({ select: BUILDING_SUMMARY_SELECT, orderBy: { name: 'asc' } });
-  }
 
   /** Every building the user belongs to, each with their own role and apartments there. */
   async mine(authUser: AuthUser) {
@@ -71,7 +52,7 @@ export class BuildingsService {
     return Promise.all(memberships.map((m) => this.detail(m.buildingId, user)));
   }
 
-  /** Full view of a building for one of its members: details, their role, apartments and pending request. */
+  /** Full view of a building for one of its members: details, their role and apartments. */
   private async detail(buildingId: string, viewer: { id: string; isAdmin: boolean }) {
     const userId = viewer.id;
     const isAdmin = effectiveAdmin(viewer);
@@ -83,7 +64,6 @@ export class BuildingsService {
         entryCode: true,
         contactLinks: { select: { id: true, type: true, link: true }, orderBy: { id: 'asc' } },
         _count: { select: { members: true } },
-        members: { where: { userId }, select: { requestedApartment: true, requestedRelation: true } },
         roles: { where: { userId }, select: { role: true } },
         apartments: {
           where: { residents: { some: { userId } } },
@@ -92,10 +72,9 @@ export class BuildingsService {
         },
       },
     });
-    const { _count, members, roles, apartments, ...rest } = building;
+    const { _count, roles, apartments, ...rest } = building;
     // An admin previewing a role ("view as") gets that role in every building.
     const role = viewedRole(viewer) ?? roleOf(roles);
-    const request = members[0];
     return {
       ...rest,
       memberCount: _count.members,
@@ -105,67 +84,147 @@ export class BuildingsService {
         ...apartment,
         relationType: residents[0].relationType,
       })),
-      myRequest:
-        request && (request.requestedApartment != null || request.requestedRelation)
-          ? { apartment: request.requestedApartment, relationType: request.requestedRelation }
-          : null,
     };
   }
 
-  async join(authUser: AuthUser, dto: JoinBuildingDto) {
+  /**
+   * Creates a building with its contact links and, optionally, its first residents.
+   * `creator` (when given) becomes a member with a management role — any user may create
+   * a building, but nobody gets in unless its management adds them.
+   */
+  async createBuilding(
+    dto: CreateBuildingDto,
+    creator?: { userId: string; role: 'committee_head' | 'management_company' },
+  ) {
+    const { contactLinks = [], residents = [], payments, ...data } = dto;
+    const links = contactLinks.map(normalizeContactLink);
+    if (creator && residents.some((r) => r.userId === creator.userId)) {
+      throw new BadRequestException('You are added as building management — remove yourself from the residents');
+    }
+    return this.write(() =>
+      this.prisma.$transaction(async (tx) => {
+        const building = await tx.building.create({ data: { ...data, contactLinks: { create: links } } });
+        if (creator) {
+          await tx.buildingUser.create({ data: { buildingId: building.id, userId: creator.userId } });
+          await tx.userRoleAssignment.create({
+            data: { buildingId: building.id, userId: creator.userId, role: creator.role },
+          });
+        }
+        await this.insertResidents(tx, building.id, residents);
+        // The wizard's payments step (apartments without their own fee follow its default fee).
+        if (payments) await tx.buildingPaymentSettings.create({ data: { buildingId: building.id, ...payments } });
+        return building;
+      }),
+    );
+  }
+
+  /** "Create a building" for any signed-in user: they become its committee head or management company. */
+  async createAsMember(authUser: AuthUser, dto: CreateBuildingDto, role: 'committee_head' | 'management_company') {
     const user = await this.usersService.findOrCreate(authUser);
-    const building = await this.prisma.building.findUnique({ where: { id: dto.buildingId } });
-    if (!building) throw new NotFoundException('Building not found');
-
-    const blocked = await this.prisma.buildingBlock.findUnique({
-      where: { buildingId_userId: { buildingId: building.id, userId: user.id } },
-    });
-    if (blocked) throw new ForbiddenException('You have been blocked from this building');
-
-    const key = `${user.id}:${building.id}`;
-    const failures = this.joinFailures.get(key);
-    if (failures && failures.resetAt > Date.now() && failures.count >= JOIN_MAX_FAILURES) {
-      throw new HttpException('Too many wrong passwords. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
-    }
-    if (!(await compare(dto.password, building.passwordHash))) {
-      const current = failures && failures.resetAt > Date.now() ? failures : { count: 0, resetAt: Date.now() + JOIN_WINDOW_MS };
-      this.joinFailures.set(key, { ...current, count: current.count + 1 });
-      throw new UnauthorizedException('Incorrect password');
-    }
-    this.joinFailures.delete(key);
-
-    // Joining adds a building (memberships in other buildings stay). The apartment and
-    // owner/renter are only a suggestion until building management confirms them.
-    await this.prisma.$transaction(async (tx) => {
-      await tx.buildingUser.upsert({
-        where: { buildingId_userId: { buildingId: building.id, userId: user.id } },
-        update: {},
-        create: {
-          buildingId: building.id,
-          userId: user.id,
-          requestedApartment: dto.apartment ?? null,
-          requestedRelation: dto.relationType ?? null,
-        },
-      });
-      // Only a first-time member gets `resident` — re-joining must not add a second role
-      // next to e.g. committee_head.
-      const hasRole = await tx.userRoleAssignment.count({ where: { userId: user.id, buildingId: building.id } });
-      if (!hasRole) {
-        await tx.userRoleAssignment.create({ data: { userId: user.id, buildingId: building.id, role: 'resident' } });
-      }
-    });
+    const building = await this.createBuilding(dto, { userId: user.id, role });
     return this.detail(building.id, user);
   }
 
-  /** A member suggests (or updates) their apartment + owner/renter, e.g. from "Finish setting up". */
-  async setMyRequest(authUser: AuthUser, buildingId: string, dto: MyRequestDto) {
-    const user = await this.usersService.findOrCreate(authUser);
-    await this.requireMembership(buildingId, user.id);
-    await this.prisma.buildingUser.update({
-      where: { buildingId_userId: { buildingId, userId: user.id } },
-      data: { requestedApartment: dto.apartment, requestedRelation: dto.relationType },
+  /**
+   * Name and picture for each pasted user ID, so management can check who they're adding.
+   * With a building (management only) each user is also flagged as already a member or blocked.
+   * Unknown IDs are simply missing from the result.
+   */
+  async previewUsers(authUser: AuthUser, ids: string[], buildingId?: string) {
+    const viewer = await this.usersService.findOrCreate(authUser);
+    if (buildingId) await this.requireManager(authUser.cognitoSub, buildingId);
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set(ids)] } },
+      select: {
+        id: true,
+        name: true,
+        googlePicture: true,
+        avatarSrc: true,
+        ...(buildingId
+          ? {
+              memberships: { where: { buildingId }, select: { id: true } },
+              blocks: { where: { buildingId }, select: { id: true } },
+            }
+          : {}),
+      },
     });
-    return this.detail(buildingId, user);
+    return users.map((u) => ({
+      userId: u.id,
+      name: u.name,
+      picture: { google: u.googlePicture, version: avatarVersion(u.avatarSrc) },
+      isMe: u.id === viewer.id,
+      alreadyMember: !!u.memberships?.length,
+      blocked: !!u.blocks?.length,
+    }));
+  }
+
+  /** Building management adds residents by their user IDs, each with their apartments — all or nothing. */
+  async addMembers(cognitoSub: string, buildingId: string, residents: ResidentEntryDto[]) {
+    await this.requireManager(cognitoSub, buildingId);
+    await this.prisma.$transaction((tx) => this.insertResidents(tx, buildingId, residents));
+    return { ok: true, added: residents.length };
+  }
+
+  /** Adds new members as residents with their apartments. Refuses unknown, duplicate, existing or blocked users. */
+  private async insertResidents(tx: Prisma.TransactionClient, buildingId: string, residents: ResidentEntryDto[]) {
+    if (!residents.length) return;
+    const ids = residents.map((r) => r.userId);
+    if (new Set(ids).size !== ids.length) throw new BadRequestException('The same person is listed twice');
+
+    const found = await tx.user.findMany({ where: { id: { in: ids } }, select: { id: true } });
+    const unknown = ids.filter((id) => !found.some((u) => u.id === id));
+    if (unknown.length) throw new NotFoundException({ message: 'Unknown user IDs', userIds: unknown });
+
+    const members = await tx.buildingUser.findMany({ where: { buildingId, userId: { in: ids } }, select: { userId: true } });
+    if (members.length) {
+      throw new ConflictException({ message: 'Already members of this building', userIds: members.map((m) => m.userId) });
+    }
+    const blocked = await tx.buildingBlock.findMany({ where: { buildingId, userId: { in: ids } }, select: { userId: true } });
+    if (blocked.length) {
+      throw new ForbiddenException({ message: 'Blocked from this building — unblock first', userIds: blocked.map((b) => b.userId) });
+    }
+
+    for (const { userId, apartments } of residents) {
+      await tx.buildingUser.create({ data: { buildingId, userId } });
+      await tx.userRoleAssignment.create({ data: { buildingId, userId, role: 'resident' } });
+      await this.writeApartments(tx, buildingId, userId, apartments);
+    }
+  }
+
+  /** Links a member to these apartments (creating or updating each apartment's details). */
+  private async writeApartments(
+    tx: Prisma.TransactionClient,
+    buildingId: string,
+    userId: string,
+    apartments: ApartmentEntryDto[],
+    linkedAt = new Map<number, Date>(),
+  ) {
+    for (const entry of apartments) {
+      const details = { floor: entry.floor, sqrm: entry.sqrm, paymentMethod: entry.paymentMethod };
+      const apartment = await tx.apartment.upsert({
+        where: { buildingId_number: { buildingId, number: entry.number } },
+        // undefined = leave as is; null = clear
+        update: details,
+        create: { buildingId, number: entry.number, ...details },
+      });
+      await tx.apartmentResident.create({
+        data: { apartmentId: apartment.id, userId, relationType: entry.relationType, linkedAt: linkedAt.get(entry.number) },
+      });
+    }
+  }
+
+  /** Maps Prisma's constraint errors to HTTP errors the UI can show. */
+  async write<T>(op: () => Promise<T>): Promise<T> {
+    try {
+      return await op();
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2002') throw new ConflictException('A building with this address already exists in this city');
+        if (err.code === 'P2003') throw new BadRequestException('Unknown city');
+        if (err.code === 'P2025') throw new NotFoundException('Building not found');
+      }
+      throw err;
+    }
   }
 
   async leave(authUser: AuthUser, buildingId: string) {
@@ -194,8 +253,6 @@ export class BuildingsService {
     const rows = await this.prisma.buildingUser.findMany({
       where: { buildingId },
       select: {
-        requestedApartment: true,
-        requestedRelation: true,
         user: {
           select: {
             id: true,
@@ -214,7 +271,7 @@ export class BuildingsService {
       },
     });
     return rows
-      .map(({ user, requestedApartment, requestedRelation }) => {
+      .map(({ user }) => {
         const apartments = user.apartments
           .map(({ relationType, apartment }) =>
             manager
@@ -228,16 +285,7 @@ export class BuildingsService {
           role: roleOf(user.roles),
           apartments,
           picture: { google: user.googlePicture, version: avatarVersion(user.avatarSrc) },
-          ...(manager
-            ? {
-                phone: user.phoneNum,
-                isAdmin: user.isAdmin,
-                request:
-                  requestedApartment != null || requestedRelation
-                    ? { apartment: requestedApartment, relationType: requestedRelation }
-                    : null,
-              }
-            : {}),
+          ...(manager ? { phone: user.phoneNum, isAdmin: user.isAdmin } : {}),
         };
       })
       .sort(
@@ -250,33 +298,24 @@ export class BuildingsService {
 
   // ---- Building management (committee head / management company of this building, or admin) ----
 
-  /** Replaces a member's apartments in this building (technical info). Clears their join request. */
+  /** Replaces a member's apartments in this building (technical info). */
   async setApartments(cognitoSub: string, buildingId: string, userId: string, dto: SetApartmentsDto) {
     await this.requireManager(cognitoSub, buildingId);
     await this.requireMembership(buildingId, userId);
     await this.prisma.$transaction(async (tx) => {
-      await tx.apartmentResident.deleteMany({ where: { userId, apartment: { buildingId } } });
-      for (const entry of dto.apartments) {
-        const details = { floor: entry.floor, sqrm: entry.sqrm, paymentMethod: entry.paymentMethod };
-        const apartment = await tx.apartment.upsert({
-          where: { buildingId_number: { buildingId, number: entry.number } },
-          // undefined = leave as is; null = clear
-          update: details,
-          create: { buildingId, number: entry.number, ...details },
-        });
-        await tx.apartmentResident.create({
-          data: { apartmentId: apartment.id, userId, relationType: entry.relationType },
-        });
-      }
-      await tx.buildingUser.update({
-        where: { buildingId_userId: { buildingId, userId } },
-        data: { requestedApartment: null, requestedRelation: null },
+      // Apartments they keep keep their link date, so they don't lose their own payment history.
+      const existing = await tx.apartmentResident.findMany({
+        where: { userId, apartment: { buildingId } },
+        select: { linkedAt: true, apartment: { select: { number: true } } },
       });
+      const linkedAt = new Map(existing.map((link) => [link.apartment.number, link.linkedAt]));
+      await tx.apartmentResident.deleteMany({ where: { userId, apartment: { buildingId } } });
+      await this.writeApartments(tx, buildingId, userId, dto.apartments, linkedAt);
     });
     return { ok: true };
   }
 
-  /** Remove (can rejoin with the password) or block (can't rejoin until unblocked). */
+  /** Remove (management can add them again) or block (can't be added again until unblocked). */
   async removeMember(cognitoSub: string, buildingId: string, userId: string, block: boolean) {
     const manager = await this.requireManager(cognitoSub, buildingId);
     await this.requireCanActOn(manager, buildingId, userId);
@@ -319,14 +358,10 @@ export class BuildingsService {
     return { ok: true };
   }
 
-  /** Description, door code and join password — name/address/city stay admin-only. */
+  /** Description and door code — name/address/city stay admin-only. */
   async updateDetails(cognitoSub: string, buildingId: string, dto: UpdateBuildingDetailsDto) {
     const manager = await this.requireManager(cognitoSub, buildingId);
-    const { password, ...data } = dto;
-    await this.prisma.building.update({
-      where: { id: buildingId },
-      data: { ...data, ...(password ? { passwordHash: await hash(password, 10) } : {}) },
-    });
+    await this.prisma.building.update({ where: { id: buildingId }, data: dto });
     const isMember = await this.prisma.buildingUser.count({ where: { buildingId, userId: manager.id } });
     return isMember ? this.detail(buildingId, manager) : { ok: true };
   }

@@ -1,6 +1,8 @@
 import { Box, Button, Card, CardContent, Container, Stack, Typography } from '@mui/material';
 import { getAuthorizationUrl } from '../utils/cognito';
 import { useLanguage } from '../i18n/LanguageContext';
+import { devLoginEnabled } from '../utils/devLogin';
+import DevSignIn from './DevSignIn';
 
 // Signed-out landing page. Once authenticated, App.tsx routes straight
 // to onboarding (if not yet complete) or the Dashboard — this component
@@ -28,7 +30,7 @@ export default function Home() {
               variant="h2"
               component="h1"
               sx={{
-                fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                fontFamily: '"Rubik", system-ui, sans-serif',
                 fontWeight: 600,
                 mb: 1,
               }}
@@ -60,6 +62,8 @@ export default function Home() {
               </Button>
             </CardContent>
           </Card>
+
+          {devLoginEnabled && <DevSignIn />}
         </Stack>
       </Container>
     </Box>

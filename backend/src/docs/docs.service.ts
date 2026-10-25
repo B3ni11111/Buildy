@@ -1,30 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BuildingsService } from '../buildings/buildings.service.js';
-import { uploadPath, type UploadedFileData } from '../uploads/uploads.js';
+import { presignGet, removeUploads, saveUpload, type UploadedFileData } from '../uploads/uploads.js';
 import { effectiveAdmin } from '../auth/request-context.js';
 
 export type { UploadedFileData };
-
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-const ALLOWED_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/gif',
-  'text/plain',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-]);
+export { MAX_UPLOAD_BYTES } from '../uploads/uploads.js';
 
 const DOC_SELECT = {
   id: true,
@@ -52,14 +33,7 @@ export class DocsService {
   async upload(cognitoSub: string, buildingId: string, file: UploadedFileData | undefined, title?: string) {
     const user = await this.buildingsService.requireMember(cognitoSub, buildingId);
     if (!file) throw new BadRequestException('No file uploaded');
-    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) throw new BadRequestException('This file type is not supported');
-
-    // Storage key is generated here — the client's file name is only kept as metadata.
-    const ext = extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '').slice(0, 10);
-    const src = `${buildingId}/${randomUUID()}${ext}`;
-    const path = uploadPath(src);
-    await mkdir(join(path, '..'), { recursive: true });
-    await writeFile(path, file.buffer);
+    const src = await saveUpload(buildingId, file);
 
     const fallbackTitle = file.originalname.replace(/\.[^.]+$/, '');
     try {
@@ -76,17 +50,17 @@ export class DocsService {
         select: DOC_SELECT,
       });
     } catch (err) {
-      await rm(path, { force: true });
+      await removeUploads([src]);
       throw err;
     }
   }
 
-  /** Resolves a doc the caller may read to its file on disk. */
+  /** A short-lived link to a doc's file, for members of its building only. */
   async file(cognitoSub: string, docId: string) {
     const doc = await this.prisma.doc.findUnique({ where: { id: docId } });
     if (!doc) throw new NotFoundException('Document not found');
     await this.buildingsService.requireMember(cognitoSub, doc.buildingId);
-    return { path: uploadPath(doc.src), fileName: doc.fileName, mimeType: doc.mimeType };
+    return presignGet(doc.src, doc.mimeType);
   }
 
   async rename(cognitoSub: string, docId: string, title: string) {
@@ -97,13 +71,22 @@ export class DocsService {
   async remove(cognitoSub: string, docId: string) {
     const doc = await this.requireUploaderOrAdmin(cognitoSub, docId);
     await this.prisma.doc.delete({ where: { id: docId } });
-    await rm(uploadPath(doc.src), { force: true });
+    await removeUploads([doc.src]);
     return { ok: true };
   }
 
-  /** Removes every uploaded file of a building (its DB rows go via the building's cascade delete). */
-  async removeBuildingFiles(buildingId: string) {
-    await rm(uploadPath(buildingId), { recursive: true, force: true });
+  /** Storage keys of every file in a building (docs and issue attachments). Read before the cascade delete. */
+  async buildingFileKeys(buildingId: string) {
+    const [docs, attachments] = await Promise.all([
+      this.prisma.doc.findMany({ where: { buildingId }, select: { src: true } }),
+      this.prisma.issueAttachment.findMany({ where: { issue: { buildingId } }, select: { src: true } }),
+    ]);
+    return [...docs, ...attachments].map((row) => row.src);
+  }
+
+  /** Deletes the given files from storage, key by key. */
+  async removeFiles(keys: string[]) {
+    await removeUploads(keys);
   }
 
   private async requireUploaderOrAdmin(cognitoSub: string, docId: string) {

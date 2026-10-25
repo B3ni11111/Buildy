@@ -3,17 +3,23 @@ import { Box, Container, Paper } from '@mui/material';
 import GreetingStep from './GreetingStep';
 import LanguageStep from './LanguageStep';
 import NameStep from './NameStep';
+import ThemeStep from './ThemeStep';
+import PhoneStep from './PhoneStep';
+import PictureStep from './PictureStep';
 import ConfirmCheck from './ConfirmCheck';
+import type { StagedPicture } from '../components/AvatarEditor';
 import { OnboardingData } from '../types/onboarding';
 import { saveOnboardingData } from '../utils/onboarding';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../utils/api';
 
 // Ordered list of data-entry steps (the greeting screen isn't part of
 // this list — it doesn't collect anything). Append future steps here;
 // the dot progress indicator and back navigation follow automatically.
-// Owner/renter is no longer asked here: it's per apartment, suggested when joining a building
-// and confirmed by building management.
-const DATA_STEPS = ['language', 'name'] as const;
+// Profile and preferences only — nothing about a building: building management adds the user
+// (by the ID shown on the home screen) and sets their apartment.
+const DATA_STEPS = ['language', 'name', 'theme', 'phone', 'picture'] as const;
 type DataStep = (typeof DATA_STEPS)[number];
 type Step = 'greeting' | DataStep;
 
@@ -24,8 +30,11 @@ interface OnboardingFlowProps {
 
 export default function OnboardingFlow({ defaultName, onComplete }: OnboardingFlowProps) {
   const { t } = useLanguage();
+  const { tokens } = useAuth();
   const [step, setStep] = useState<Step>('greeting');
   const [data, setData] = useState<Partial<OnboardingData>>({ name: defaultName });
+  const [phone, setPhone] = useState('');
+  const [picture, setPicture] = useState<StagedPicture>(null);
   const [confirming, setConfirming] = useState<{ message: string; onDone: () => void } | null>(null);
 
   const goToDataStep = (s: DataStep) => setStep(s);
@@ -55,9 +64,22 @@ export default function OnboardingFlow({ defaultName, onComplete }: OnboardingFl
   };
 
   const handleName = (name: string) => {
-    const finalData = { ...data, name } as OnboardingData;
-    setData(finalData);
-    confirmThen(t('name.confirm', { name: name.split(' ')[0] }), () => {
+    setData({ ...data, name });
+    goToDataStep(stepAfter('name')!);
+  };
+
+  /** Everything is collected: save the optional extras (best effort — Settings can redo them), then finish. */
+  const finish = (skippedPicture: boolean) => {
+    const finalData = data as OnboardingData;
+    const upload = !skippedPicture && picture?.kind === 'upload' ? picture.file : null;
+    confirmThen(t('name.confirm', { name: finalData.name.split(' ')[0] }), async () => {
+      if (tokens) {
+        await Promise.allSettled([
+          phone ? api.updateMe(tokens.id_token, { phone }) : null,
+          upload ? api.setAvatar(tokens.id_token, upload) : null,
+        ]);
+      }
+      if (picture?.kind === 'upload') URL.revokeObjectURL(picture.previewUrl);
       saveOnboardingData(finalData);
       onComplete(finalData);
     });
@@ -88,6 +110,28 @@ export default function OnboardingFlow({ defaultName, onComplete }: OnboardingFl
               {step === 'language' && <LanguageStep initialValue={data.language} onSubmit={handleLanguage} />}
               {step === 'name' && (
                 <NameStep initialValue={data.name} onSubmit={handleName} onBack={() => setStep(stepBefore('name'))} />
+              )}
+              {step === 'theme' && (
+                <ThemeStep onSubmit={() => goToDataStep('phone')} onBack={() => setStep(stepBefore('theme'))} />
+              )}
+              {step === 'phone' && (
+                <PhoneStep
+                  initialValue={phone}
+                  onSubmit={(value) => {
+                    setPhone(value);
+                    goToDataStep('picture');
+                  }}
+                  onBack={() => setStep(stepBefore('phone'))}
+                />
+              )}
+              {step === 'picture' && (
+                <PictureStep
+                  name={data.name ?? ''}
+                  staged={picture}
+                  onStage={setPicture}
+                  onSubmit={finish}
+                  onBack={() => setStep(stepBefore('picture'))}
+                />
               )}
             </>
           )}

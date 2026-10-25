@@ -12,6 +12,8 @@ interface StepShellProps {
   continueDisabled?: boolean;
   continueLabel?: string;
   onBack?: () => void;
+  /** Optional steps: shows a "Skip" button under Continue. */
+  onSkip?: () => void;
 }
 
 /**
@@ -27,6 +29,7 @@ export default function StepShell({
   continueDisabled,
   continueLabel,
   onBack,
+  onSkip,
 }: StepShellProps) {
   const { t, dir } = useLanguage();
   const BackIcon = dir === 'rtl' ? ArrowForwardIcon : ArrowBackIcon;
@@ -52,7 +55,7 @@ export default function StepShell({
       <Typography
         variant="h4"
         sx={{
-          fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+          fontFamily: '"Rubik", system-ui, sans-serif',
           fontWeight: 600,
           mb: 0.5,
         }}
@@ -95,6 +98,11 @@ export default function StepShell({
       >
         {continueLabel ?? t('common.continue')}
       </Button>
+      {onSkip && (
+        <Button fullWidth onClick={onSkip} sx={{ mt: 1, textTransform: 'none' }}>
+          {t('common.skip')}
+        </Button>
+      )}
     </Box>
   );
 }

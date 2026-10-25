@@ -36,7 +36,6 @@ export interface BuildingSave {
   address?: string;
   description: string | null;
   entryCode: string | null;
-  password?: string;
 }
 
 interface EditBuildingDialogProps {
@@ -71,12 +70,11 @@ export default function EditBuildingDialog({
   const [address, setAddress] = useState(building.address);
   const [description, setDescription] = useState(building.description ?? '');
   const [entryCode, setEntryCode] = useState(building.entryCode ?? '');
-  const [password, setPassword] = useState('');
   const [contactLinks, setContactLinks] = useState<ContactLink[]>(building.contactLinks);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const valid = name.trim() && city && address.trim() && (password === '' || password.length >= 4);
+  const valid = name.trim() && city && address.trim();
 
   const handleSave = async () => {
     if (!valid || !city || saving) return;
@@ -87,7 +85,6 @@ export default function EditBuildingDialog({
         ...(canEditIdentity ? { name: name.trim(), cityId: city.id, address: address.trim() } : {}),
         description: description.trim() || null,
         entryCode: entryCode.trim() || null,
-        ...(password ? { password } : {}),
       });
     } catch (err) {
       setError(t(err instanceof ApiError && err.status === 409 ? 'admin.duplicateError' : 'admin.saveError'));
@@ -140,15 +137,6 @@ export default function EditBuildingDialog({
             value={entryCode}
             onChange={(e) => setEntryCode(e.target.value)}
             slotProps={{ htmlInput: { maxLength: 20, dir: 'ltr' } }}
-          />
-          <TextField
-            fullWidth
-            type="password"
-            label={t('admin.passwordKeep')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={password !== '' && password.length < 4}
-            helperText={password !== '' && password.length < 4 ? t('wizard.password.placeholder') : undefined}
           />
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>

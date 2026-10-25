@@ -18,8 +18,16 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Tabs,
   TextField,
   Typography,
@@ -38,16 +46,20 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined';
 import { MembersList } from '../components/MembersCard';
-import MessagesCard from '../components/MessagesCard';
+import IssuesCard from '../components/IssuesCard';
 import DocumentsCard from '../components/DocumentsCard';
 import { useMembers } from '../hooks/useMembers';
 import EditBuildingDialog from '../components/EditBuildingDialog';
 import { useLanguage } from '../i18n/LanguageContext';
 import { api } from '../utils/api';
-import { AdminBuilding, City, ContactType, CurrentUser, MessageType } from '../types/building';
+import { AdminBuilding, BUILDING_ROLES, BuildingRole, City, ContactType, CurrentUser, PaymentsOverview } from '../types/building';
+import { ManagerBudget } from '../components/PaymentsCard';
+import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 
 const SELECTED_KEY = 'buildy_admin_building';
-const TABS = ['overview', 'members', 'messages', 'docs'] as const;
+const TABS = ['overview', 'apartments', 'payments', 'members', 'issues', 'docs'] as const;
 type ConsoleTab = (typeof TABS)[number];
 
 const CONTACT_ICON: Record<ContactType, typeof WhatsAppIcon> = {
@@ -76,13 +88,15 @@ interface AdminPanelProps {
   onBack: () => void;
   /** Called after any building change so the rest of the app can refresh (e.g. the user's own building was edited or deleted). */
   onBuildingsChanged: () => void;
+  /** Show this building in the app (the admin must be a member: the console joins first when needed). */
+  onOpenBuilding: (id: string) => void;
 }
 
 /**
  * Admin console: pick a building on the side (search to jump), then manage it
  * in tabs — overview, members, messages, documents.
  */
-export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onBack, onBuildingsChanged }: AdminPanelProps) {
+export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onBack, onBuildingsChanged, onOpenBuilding }: AdminPanelProps) {
   const { t, dir } = useLanguage();
   const BackIcon = dir === 'rtl' ? ArrowForwardIcon : ArrowBackIcon;
   const [buildings, setBuildings] = useState<AdminBuilding[] | null>(null);
@@ -190,7 +204,7 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
                   </Box>
                   {[
                     { Icon: PeopleOutlinedIcon, value: building._count.members },
-                    { Icon: ForumOutlinedIcon, value: building._count.messages },
+                    { Icon: ForumOutlinedIcon, value: building._count.issues },
                     { Icon: DescriptionOutlinedIcon, value: building._count.docs },
                   ].map(({ Icon, value }, i) => (
                     <Stack key={i} component="span" direction="row" sx={{ alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
@@ -227,7 +241,7 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
           <Box>
             <Typography
               variant="h4"
-              sx={{ fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif', fontWeight: 600 }}
+              sx={{ fontFamily: '"Rubik", system-ui, sans-serif', fontWeight: 600 }}
             >
               {t('admin.consoleTitle')}
             </Typography>
@@ -279,6 +293,14 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
                         {selected.address}, {selected.city.name}
                       </Typography>
                     </Box>
+                    <OpenBuildingButton
+                      joined={!!selected.joined}
+                      onOpen={() => onOpenBuilding(selected.id)}
+                      onJoinAndOpen={async (role) => {
+                        await api.admin.joinBuilding(idToken, selected.id, role);
+                        onOpenBuilding(selected.id);
+                      }}
+                    />
                     <Button
                       size="small"
                       startIcon={<EditOutlinedIcon />}
@@ -305,14 +327,16 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
                     sx={{ mt: 1 }}
                   >
                     <Tab value="overview" label={t('admin.tabOverview')} sx={{ textTransform: 'none' }} />
+                    <Tab value="apartments" label={t('admin.tabApartments')} sx={{ textTransform: 'none' }} />
+                    <Tab value="payments" label={t('widgets.tile.payments')} sx={{ textTransform: 'none' }} />
                     <Tab
                       value="members"
                       label={`${t('admin.tabMembers')} (${selected._count.members})`}
                       sx={{ textTransform: 'none' }}
                     />
                     <Tab
-                      value="messages"
-                      label={`${t('admin.tabMessages')} (${selected._count.messages})`}
+                      value="issues"
+                      label={`${t('admin.tabIssues')} (${selected._count.issues})`}
                       sx={{ textTransform: 'none' }}
                     />
                     <Tab
@@ -326,12 +350,30 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
 
               {/* key= remounts tab content per building, so each fetches its own data. */}
               <Box key={`${selected.id}-${tab}`}>
-                {tab === 'overview' && <OverviewTab building={selected} onEdit={() => setEditing(selected)} />}
+                {tab === 'overview' && (
+                  <OverviewTab
+                    building={selected}
+                    onEdit={() => setEditing(selected)}
+                    onJoin={async (role) => {
+                      await api.admin.joinBuilding(idToken, selected.id, role);
+                      setReloadKey((k) => k + 1);
+                      onBuildingsChanged();
+                    }}
+                  />
+                )}
+                {tab === 'apartments' && <ApartmentsTab buildingId={selected.id} idToken={idToken} />}
+                {tab === 'payments' && (
+                  <Card variant="outlined" sx={{ borderRadius: 4 }}>
+                    <CardContent sx={{ p: 2.5 }}>
+                      <ManagerBudget buildingId={selected.id} idToken={idToken} />
+                    </CardContent>
+                  </Card>
+                )}
                 {tab === 'members' && (
                   <MembersTab building={selected} idToken={idToken} currentUser={currentUser} onChanged={onBuildingsChanged} />
                 )}
-                {tab === 'messages' && (
-                  <MessagesTab buildingId={selected.id} idToken={idToken} currentUser={currentUser} />
+                {tab === 'issues' && (
+                  <IssuesTab buildingId={selected.id} idToken={idToken} currentUser={currentUser} />
                 )}
                 {tab === 'docs' && <DocsTab buildingId={selected.id} idToken={idToken} currentUser={currentUser} />}
               </Box>
@@ -354,7 +396,6 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
               address: fields.address!,
               description: fields.description,
               entryCode: fields.entryCode,
-              ...(fields.password ? { password: fields.password } : {}),
             });
             replaceBuilding(updated);
             setEditing(null);
@@ -388,15 +429,193 @@ export default function AdminPanel({ idToken, currentUser, onCreateBuilding, onB
   );
 }
 
-function OverviewTab({ building, onEdit }: { building: AdminBuilding; onEdit: () => void }) {
+/** "Open building": switch the app to it. Not a member yet: pick a role, join, then open. */
+function OpenBuildingButton({
+  joined,
+  onOpen,
+  onJoinAndOpen,
+}: {
+  joined: boolean;
+  onOpen: () => void;
+  onJoinAndOpen: (role: BuildingRole) => Promise<void>;
+}) {
+  const { t } = useLanguage();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <Button
+        size="small"
+        variant="contained"
+        startIcon={<OpenInNewIcon />}
+        disabled={busy}
+        onClick={(e) => (joined ? onOpen() : setAnchor(e.currentTarget))}
+        sx={{ textTransform: 'none' }}
+      >
+        {t('admin.openBuilding')}
+      </Button>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2, py: 0.5, maxWidth: 260 }}>
+          {t('admin.openJoinFirst')}
+        </Typography>
+        {BUILDING_ROLES.map((role) => (
+          <MenuItem
+            key={role}
+            onClick={async () => {
+              setAnchor(null);
+              setBusy(true);
+              try {
+                await onJoinAndOpen(role);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t('admin.joinAs', { role: t(`role.${role}`) })}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
+
+/** Every apartment at a glance: floor, size, residents (owner/renter), who pays, fee, method and this month's state. */
+function ApartmentsTab({ buildingId, idToken }: { buildingId: string; idToken: string }) {
+  const { t } = useLanguage();
+  const [data, setData] = useState<PaymentsOverview | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api.manage.payments
+      .overview(idToken, buildingId)
+      .then((overview) => {
+        if (!cancelled) setData(overview);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [idToken, buildingId]);
+
+  if (error) return <Alert severity="error">{t('admin.saveError')}</Alert>;
+  if (!data) return <CircularProgress size={24} />;
+  if (data.apartments.length === 0) return <Typography color="text.secondary">{t('admin.apartmentsEmpty')}</Typography>;
+
+  return (
+    <TableContainer component={Card} variant="outlined" sx={{ borderRadius: 4 }}>
+      <Table size="small" sx={{ minWidth: 760 }}>
+        <TableHead>
+          <TableRow>
+            <TableCell>{t('payments.filterApartment')}</TableCell>
+            <TableCell>{t('myUnit.floor')}</TableCell>
+            <TableCell>{t('myUnit.sqrm')}</TableCell>
+            <TableCell>{t('members.residents')}</TableCell>
+            <TableCell>{t('payments.whoPays')}</TableCell>
+            <TableCell>{t('payments.colAmount')}</TableCell>
+            <TableCell>{t('payments.method')}</TableCell>
+            <TableCell>{t('payments.colStatus')}</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {data.apartments.map((a) => (
+            <TableRow key={a.apartmentId}>
+              <TableCell sx={{ fontWeight: 600 }}>{a.number}</TableCell>
+              <TableCell>{a.floor ?? '—'}</TableCell>
+              <TableCell>{a.sqrm ?? '—'}</TableCell>
+              <TableCell>
+                {a.residents.length
+                  ? a.residents.map((r) => `${r.name || t('members.unnamed')} (${t(`relationType.${r.relationType}`)})`).join(', ')
+                  : t('payments.noResidents')}
+              </TableCell>
+              <TableCell>{a.payer ? a.payer.name || t('members.unnamed') : '—'}</TableCell>
+              <TableCell dir="ltr" sx={{ textAlign: 'start' }}>
+                ₪{a.payment?.amount ?? a.fee}
+              </TableCell>
+              <TableCell>{t(`paymentMethod.${a.method}`)}</TableCell>
+              <TableCell>{a.payment ? (a.payment.status === 'paid' ? t('payments.paid') : t('payments.unpaid')) : '—'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+/** Join the building as a member (with a chosen role), so it shows in the admin's own building switcher. */
+function JoinBuilding({ joined, onJoin }: { joined: boolean; onJoin: (role: BuildingRole) => Promise<void> }) {
+  const { t } = useLanguage();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+
+  if (joined) {
+    return <Chip icon={<CheckCircleOutlinedIcon />} label={t('admin.joined')} color="success" variant="outlined" sx={{ alignSelf: 'flex-start' }} />;
+  }
+  return (
+    <Box>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<LoginOutlinedIcon />}
+        disabled={busy}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{ textTransform: 'none' }}
+      >
+        {t('admin.join')}
+      </Button>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        {t('admin.joinHint')}
+      </Typography>
+      {error && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {t('admin.saveError')}
+        </Alert>
+      )}
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {BUILDING_ROLES.map((role) => (
+          <MenuItem
+            key={role}
+            onClick={async () => {
+              setAnchor(null);
+              setBusy(true);
+              setError(false);
+              try {
+                await onJoin(role);
+              } catch {
+                setError(true);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t('admin.joinAs', { role: t(`role.${role}`) })}
+          </MenuItem>
+        ))}
+      </Menu>
+    </Box>
+  );
+}
+
+function OverviewTab({
+  building,
+  onEdit,
+  onJoin,
+}: {
+  building: AdminBuilding;
+  onEdit: () => void;
+  onJoin: (role: BuildingRole) => Promise<void>;
+}) {
   const { t } = useLanguage();
   const stats = [
     { label: t('admin.tabMembers'), value: building._count.members },
-    { label: t('admin.tabMessages'), value: building._count.messages },
+    { label: t('admin.tabIssues'), value: building._count.issues },
     { label: t('admin.tabDocuments'), value: building._count.docs },
   ];
   return (
     <Stack spacing={2}>
+      <JoinBuilding joined={!!building.joined} onJoin={onJoin} />
       <Stack direction="row" spacing={2}>
         {stats.map(({ label, value }) => (
           <Card key={label} variant="outlined" sx={{ borderRadius: 4, flex: 1 }}>
@@ -491,15 +710,17 @@ function MembersTab({
   );
 }
 
-function MessagesTab({ buildingId, idToken, currentUser }: { buildingId: string; idToken: string; currentUser: CurrentUser }) {
-  const [composeType, setComposeType] = useState<MessageType | null>(null);
+function IssuesTab({ buildingId, idToken, currentUser }: { buildingId: string; idToken: string; currentUser: CurrentUser }) {
+  const [composeOpen, setComposeOpen] = useState(false);
   return (
-    <MessagesCard
+    <IssuesCard
       buildingId={buildingId}
       idToken={idToken}
-      composeType={composeType}
-      onComposeTypeChange={setComposeType}
+      composeOpen={composeOpen}
+      onComposeOpenChange={setComposeOpen}
       currentUser={currentUser}
+      // Admins can change statuses everywhere.
+      canManage
     />
   );
 }

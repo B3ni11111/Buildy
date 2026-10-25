@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CacheProvider } from '@emotion/react';
-import { Box, Button, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
+import { Box, Button, CircularProgress, CssBaseline, GlobalStyles, ThemeProvider } from '@mui/material';
 import Home from './components/Home';
 import Settings, { type SettingsSection } from './components/Settings';
 import Dashboard from './components/Dashboard';
+import Footer from './components/Footer';
+import FeedbackDialog from './components/FeedbackDialog';
+import InfoPage, { type InfoPageKind } from './components/InfoPage';
 import OnboardingFlow from './onboarding/OnboardingFlow';
-import JoinBuildingStep from './onboarding/JoinBuildingStep';
+import NoBuildingHome from './components/NoBuildingHome';
 import AdminPanel from './admin/AdminPanel';
-import CreateBuildingWizard from './admin/CreateBuildingWizard';
+import CreateBuildingWizard from './components/CreateBuildingWizard';
 import AdminFab from './admin/AdminFab';
 import { useAuth } from './context/AuthContext';
 import { useLanguage } from './i18n/LanguageContext';
@@ -15,6 +18,7 @@ import { getOnboardingData, saveOnboardingData } from './utils/onboarding';
 import { SUPPORTED_LANGUAGES, type LanguageCode } from './types/language';
 import { ltrCache, rtlCache } from './i18n/rtlCache';
 import { api, setViewAs as setApiViewAs } from './utils/api';
+import { alpha } from '@mui/material/styles';
 import { getTheme } from './theme';
 import { useColorMode } from './context/ColorModeContext';
 import type { OnboardingData } from './types/onboarding';
@@ -26,7 +30,12 @@ const VIEW_AS_KEY = 'buildy_view_as';
 function App() {
   const { isAuthenticated, user, tokens } = useAuth();
   const { dir, t, setLanguage } = useLanguage();
-  const [view, setView] = useState<'home' | 'settings' | 'admin' | 'createBuilding' | 'join'>('home');
+  const [view, setView] = useState<'home' | 'settings' | 'admin' | 'createBuilding'>('home');
+  // The wizard is for everyone; admins opening it from the console create buildings for others.
+  const [createAsAdmin, setCreateAsAdmin] = useState(false);
+  // Footer pages (about, terms, privacy) show over everything else until the user goes back.
+  const [infoPage, setInfoPage] = useState<InfoPageKind | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('profile');
   // Admins can preview the app as a building role (null = full admin); remembered on this device.
   const [viewAs, setViewAs] = useState<BuildingRole | null>(() => {
@@ -118,6 +127,19 @@ function App() {
     };
   }, [isAuthenticated, profile, tokens, buildingReload]);
 
+  // Waiting to be added by building management: check again whenever the user comes back to this tab.
+  const waiting = !!buildings && buildings.length === 0;
+  useEffect(() => {
+    if (!waiting) return;
+    const check = () => document.visibilityState === 'visible' && setBuildingReload((n) => n + 1);
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('focus', check);
+    return () => {
+      document.removeEventListener('visibilitychange', check);
+      window.removeEventListener('focus', check);
+    };
+  }, [waiting]);
+
   const building = buildings?.find((b) => b.id === currentBuildingId) ?? buildings?.[0] ?? null;
 
   const selectBuilding = (id: string) => {
@@ -129,10 +151,21 @@ function App() {
     }
   };
 
-  const handleJoined = (joined: Building) => {
-    setBuildings((current) => [...(current ?? []).filter((b) => b.id !== joined.id), joined]);
-    selectBuilding(joined.id);
-    setView('home');
+  const openCreateBuilding = (asAdmin: boolean) => {
+    setCreateAsAdmin(asAdmin);
+    setView('createBuilding');
+  };
+
+  /** After the wizard: refetch, and show the new building if the user became part of it. */
+  const handleBuildingCreated = async () => {
+    if (tokens) {
+      const list = await api.getMyBuildings(tokens.id_token).catch(() => null);
+      if (list) {
+        setBuildings(list);
+        if (!createAsAdmin && list.length) selectBuilding(list[list.length - 1].id);
+      }
+    }
+    setView(createAsAdmin ? 'admin' : 'home');
   };
 
   /** Replace one building in the list (e.g. after management edits its details). */
@@ -178,6 +211,7 @@ function App() {
   };
 
   let content;
+  let showsDashboard = false;
   if (!isAuthenticated) {
     content = <Home />;
   } else if (!profile && !profileChecked) {
@@ -189,15 +223,15 @@ function App() {
   } else if (!profile) {
     // Config gate: the home page only appears once onboarding is complete.
     content = <OnboardingFlow defaultName={user?.name} onComplete={setProfile} />;
-  } else if (isAdmin && view === 'createBuilding') {
+  } else if (infoPage) {
+    content = <InfoPage kind={infoPage} />;
+  } else if (view === 'createBuilding' && (!createAsAdmin || isAdmin)) {
     content = (
       <CreateBuildingWizard
         idToken={tokens!.id_token}
-        onCancel={() => setView('admin')}
-        onDone={() => {
-          setBuildingReload((n) => n + 1);
-          setView('admin');
-        }}
+        asAdmin={createAsAdmin}
+        onCancel={() => setView(createAsAdmin ? 'admin' : 'home')}
+        onDone={handleBuildingCreated}
       />
     );
   } else if (isAdmin && view === 'admin') {
@@ -206,44 +240,15 @@ function App() {
       <AdminPanel
         idToken={tokens!.id_token}
         currentUser={effectiveUser!}
-        onCreateBuilding={() => setView('createBuilding')}
+        onCreateBuilding={() => openCreateBuilding(true)}
         onBack={() => setView('home')}
         onBuildingsChanged={() => setBuildingReload((n) => n + 1)}
-      />
-    );
-  } else if (buildings === undefined) {
-    content = (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Box>
-    );
-  } else if (!building) {
-    // Second, separate gate: building membership is server-owned (unlike
-    // the local profile above), so it's checked asynchronously and kept
-    // out of OnboardingFlow's synchronous DATA_STEPS wizard.
-    content = (
-      <>
-        <JoinBuildingStep idToken={tokens!.id_token} onJoined={handleJoined} />
-        {isAdmin && (
-          <Box sx={{ position: 'fixed', bottom: 24, insetInlineStart: 0, insetInlineEnd: 0, textAlign: 'center' }}>
-            <Button
-              variant="outlined"
-              onClick={() => setView('admin')}
-              sx={{ textTransform: 'none', bgcolor: 'background.paper' }}
-            >
-              {t('admin.openPanel')}
-            </Button>
-          </Box>
-        )}
-      </>
-    );
-  } else if (view === 'join') {
-    content = (
-      <JoinBuildingStep
-        idToken={tokens!.id_token}
-        onJoined={handleJoined}
-        onCancel={() => setView('home')}
-        excludeIds={buildings.map((b) => b.id)}
+        onOpenBuilding={(id) => {
+          // The admin is a member by now (the console joins first if needed): refetch and show it.
+          selectBuilding(id);
+          setBuildingReload((n) => n + 1);
+          setView('home');
+        }}
       />
     );
   } else if (view === 'settings') {
@@ -254,13 +259,38 @@ function App() {
         currentUser={currentUser}
         onCurrentUserChange={setCurrentUser}
         onBack={() => setView('home')}
-        buildingName={building.name}
-        onLeaveBuilding={handleLeaveBuilding}
+        buildingName={building?.name}
+        onLeaveBuilding={building ? handleLeaveBuilding : undefined}
         onOpenAdmin={isAdmin ? () => setView('admin') : undefined}
         initialSection={settingsSection}
       />
     );
+  } else if (buildings === undefined) {
+    content = (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Box>
+    );
+  } else if (!building) {
+    // Second, separate gate: building membership is server-owned (unlike the local profile
+    // above) — building management adds the user by their ID, so until then they see their ID.
+    content = (
+      <NoBuildingHome
+        firstName={profile.name.split(' ')[0]}
+        currentUser={currentUser}
+        onOpenSettings={() => openSettings('profile')}
+        onCreateBuilding={() => openCreateBuilding(false)}
+        onRefresh={() => setBuildingReload((n) => n + 1)}
+      >
+        {isAdmin && (
+          <Button variant="outlined" onClick={() => setView('admin')} sx={{ textTransform: 'none' }}>
+            {t('admin.openPanel')}
+          </Button>
+        )}
+      </NoBuildingHome>
+    );
   } else {
+    showsDashboard = true;
     content = (
       <Dashboard
         profile={profile}
@@ -268,11 +298,11 @@ function App() {
         building={building}
         idToken={tokens!.id_token}
         onSelectBuilding={selectBuilding}
-        onJoinAnother={() => setView('join')}
+        onCreateBuilding={() => openCreateBuilding(false)}
         onOpenSettings={openSettings}
+        footerLinks={{ onFeedback: () => setFeedbackOpen(true), onOpenPage: setInfoPage }}
         adminView={isRealAdmin ? { viewAs, onExit: () => changeViewAs(null) } : undefined}
         currentUser={effectiveUser}
-        onCurrentUserChange={setCurrentUser}
         onBuildingChange={replaceBuilding}
         onBuildingRefresh={() => setBuildingReload((n) => n + 1)}
       />
@@ -283,7 +313,43 @@ function App() {
     <CacheProvider value={dir === 'rtl' ? rtlCache : ltrCache}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        {/* No sideways page scroll, e.g. when the browser is zoomed in. `clip` (not `hidden`) so sticky bars
+            keep working and MUI's scroll lock on menus/dialogs doesn't mistake <html> for a scroll container. */}
+        <GlobalStyles
+          styles={(theme) => {
+            // Scrollbars in the palette: a quiet thumb on a transparent track, in light and dark.
+            const thumb = alpha(theme.palette.text.secondary, 0.4);
+            const thumbHover = alpha(theme.palette.primary.main, 0.7);
+            return {
+              // No sideways page scroll. On <html> (not <body>) so the page background and the viewport scroll
+              // behave normally; menus and dialogs no longer lock scrolling, so this can't make the page jump.
+              html: { overflowX: 'hidden', scrollbarGutter: 'stable' },
+              // `:root` (not `html`) so it beats the starter stylesheet's grey root background.
+              ':root': { backgroundColor: theme.palette.background.default },
+              body: { minHeight: '100vh' },
+              // Chrome/Edge/Safari use the ::-webkit-scrollbar rules below (and ignore them if the standard
+              // properties are also set), so the standard ones are only for Firefox.
+              '@supports not selector(::-webkit-scrollbar)': {
+                '*': { scrollbarWidth: 'thin', scrollbarColor: `${thumb} transparent` },
+              },
+              '*::-webkit-scrollbar': { width: 10, height: 10 },
+              '*::-webkit-scrollbar-track': { background: 'transparent' },
+              '*::-webkit-scrollbar-corner': { background: 'transparent' },
+              '*::-webkit-scrollbar-thumb': {
+                backgroundColor: thumb,
+                borderRadius: 8,
+                border: '2px solid transparent',
+                backgroundClip: 'content-box',
+              },
+              '*::-webkit-scrollbar-thumb:hover': { backgroundColor: thumbHover, backgroundClip: 'content-box' },
+            };
+          }}
+        />
         {content}
+        {isAuthenticated && profile && view !== 'createBuilding' && (
+          <Footer hideOnPhone={showsDashboard} active={infoPage} onOpenPage={setInfoPage} onFeedback={() => setFeedbackOpen(true)} />
+        )}
+        {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
         {/* The wrench: admin tools for real admins, everywhere except the full-screen wizard. */}
         {isAuthenticated && profile && isRealAdmin && view !== 'createBuilding' && (
           <AdminFab

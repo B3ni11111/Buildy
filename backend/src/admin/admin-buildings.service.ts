@@ -1,6 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, UserRole } from '@prisma/client';
-import { hash } from 'bcryptjs';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DocsService } from '../docs/docs.service.js';
 import { BuildingsService } from '../buildings/buildings.service.js';
@@ -16,7 +15,7 @@ const ADMIN_BUILDING_SELECT = {
   createdAt: true,
   city: { select: { id: true, name: true } },
   contactLinks: { select: { id: true, type: true, link: true }, orderBy: { id: 'asc' } },
-  _count: { select: { members: true, messages: true, docs: true } },
+  _count: { select: { members: true, issues: true, docs: true } },
 } as const;
 
 @Injectable()
@@ -27,30 +26,44 @@ export class AdminBuildingsService {
     private readonly buildingsService: BuildingsService,
   ) {}
 
-  list() {
-    return this.prisma.building.findMany({ select: ADMIN_BUILDING_SELECT, orderBy: { createdAt: 'asc' } });
+  /** Every building; `joined` = the calling admin is a member of it (it shows on their own home screen). */
+  async list(cognitoSub: string) {
+    const buildings = await this.prisma.building.findMany({
+      select: { ...ADMIN_BUILDING_SELECT, members: { where: { user: { cognitoSub } }, select: { id: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return buildings.map(({ members, ...building }) => ({ ...building, joined: members.length > 0 }));
   }
 
-  async create(dto: CreateBuildingDto) {
-    const { password, contactLinks = [], ...data } = dto;
-    const links = contactLinks.map(normalizeContactLink);
-    return this.write(async () =>
-      this.prisma.building.create({
-        data: { ...data, passwordHash: await hash(password, 10), contactLinks: { create: links } },
-        select: ADMIN_BUILDING_SELECT,
-      }),
+  /**
+   * The admin joins a building from the console with the role they pick, so it appears in their own
+   * building switcher (admin powers are global either way). A block on them there is lifted.
+   */
+  async join(cognitoSub: string, buildingId: string, role: UserRole) {
+    const admin = await this.prisma.user.findUniqueOrThrow({ where: { cognitoSub } });
+    await this.write(() =>
+      this.prisma.$transaction([
+        this.prisma.buildingBlock.deleteMany({ where: { buildingId, userId: admin.id } }),
+        this.prisma.buildingUser.upsert({
+          where: { buildingId_userId: { buildingId, userId: admin.id } },
+          update: {},
+          create: { buildingId, userId: admin.id },
+        }),
+        this.prisma.userRoleAssignment.deleteMany({ where: { buildingId, userId: admin.id } }),
+        this.prisma.userRoleAssignment.create({ data: { buildingId, userId: admin.id, role } }),
+      ]),
     );
+    return { ok: true };
+  }
+
+  /** Admins create buildings without becoming members (residents from the wizard are added). */
+  async create(dto: CreateBuildingDto) {
+    const building = await this.buildingsService.createBuilding(dto);
+    return this.prisma.building.findUniqueOrThrow({ where: { id: building.id }, select: ADMIN_BUILDING_SELECT });
   }
 
   async update(id: string, dto: UpdateBuildingDto) {
-    const { password, ...data } = dto;
-    return this.write(async () =>
-      this.prisma.building.update({
-        where: { id },
-        data: { ...data, ...(password ? { passwordHash: await hash(password, 10) } : {}) },
-        select: ADMIN_BUILDING_SELECT,
-      }),
-    );
+    return this.write(() => this.prisma.building.update({ where: { id }, data: dto, select: ADMIN_BUILDING_SELECT }));
   }
 
   async addContactLink(buildingId: string, dto: ContactLinkDto) {
@@ -86,24 +99,16 @@ export class AdminBuildingsService {
     return { ok: true };
   }
 
-  /** Cascades to memberships, roles, contact links, docs and messages — and deletes the uploaded files. */
+  /** Cascades to memberships, roles, contact links, docs and issues — and deletes the uploaded files. */
   async remove(id: string) {
+    // The cascade removes the rows holding the keys, so read them first.
+    const keys = await this.docsService.buildingFileKeys(id);
     await this.write(() => this.prisma.building.delete({ where: { id } }));
-    await this.docsService.removeBuildingFiles(id);
+    await this.docsService.removeFiles(keys);
     return { ok: true };
   }
 
-  /** Maps Prisma's constraint errors to HTTP errors the UI can show. */
-  private async write<T>(op: () => Promise<T>): Promise<T> {
-    try {
-      return await op();
-    } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === 'P2002') throw new ConflictException('A building with this address already exists in this city');
-        if (err.code === 'P2003') throw new BadRequestException('Unknown city');
-        if (err.code === 'P2025') throw new NotFoundException('Building not found');
-      }
-      throw err;
-    }
+  private write<T>(op: () => Promise<T>) {
+    return this.buildingsService.write(op);
   }
 }

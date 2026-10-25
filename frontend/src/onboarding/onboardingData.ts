@@ -4,6 +4,8 @@ export interface LanguageOption {
   code: LanguageCode;
   label: string;
   nativeLabel: string;
+  /** Not every screen is translated yet: the rest falls back to English, and the picker says so. */
+  partial?: boolean;
 }
 
 // Selectable app-language options. Native names are shown as-is (they're
@@ -11,10 +13,10 @@ export interface LanguageOption {
 export const LANGUAGE_OPTIONS: LanguageOption[] = [
   { code: 'en', label: 'English', nativeLabel: 'English' },
   { code: 'he', label: 'Hebrew', nativeLabel: 'עברית' },
-  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية' },
-  { code: 'ru', label: 'Russian', nativeLabel: 'Русский' },
-  { code: 'fr', label: 'French', nativeLabel: 'Français' },
-  { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', partial: true },
+  { code: 'ru', label: 'Russian', nativeLabel: 'Русский', partial: true },
+  { code: 'fr', label: 'French', nativeLabel: 'Français', partial: true },
+  { code: 'es', label: 'Spanish', nativeLabel: 'Español', partial: true },
 ];
 
 

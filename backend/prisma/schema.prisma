@@ -27,13 +27,33 @@ enum RelationType {
   @@map("relation_type")
 }
 
+// Bit and PayBox count as one method (2026-10-22).
 enum PaymentMethod {
+  card
   cash
   transfer
-  bit
-  paybox
+  bit_paybox
 
   @@map("payment_method")
+}
+
+// How a charge got marked paid: one apartment clicked by management, "Mark all", the resident's
+// own Pay, or (later) a payment provider.
+enum PaymentConfirmation {
+  single
+  bulk
+  self
+  automatic
+
+  @@map("payment_confirmation")
+}
+
+// Whether a building's months open by management's click or by themselves on `open_day`.
+enum PaymentsOpenMode {
+  manual
+  auto
+
+  @@map("payments_open_mode")
 }
 
 enum ContactType {
@@ -44,12 +64,25 @@ enum ContactType {
   @@map("contact_type")
 }
 
-enum MessageType {
-  general
-  urgent
-  maintenance
+// Issue lifecycle: residents open issues; building management moves them on.
+enum IssueStatus {
+  opened
+  in_process
+  denied
+  resolved
 
-  @@map("message_type")
+  @@map("issue_status")
+}
+
+// Payment lifecycle. The demo only uses unpaid -> paid; pending / failed are for a future
+// third-party provider that confirms payments asynchronously.
+enum PaymentStatus {
+  unpaid
+  pending
+  paid
+  failed
+
+  @@map("payment_status")
 }
 
 // id = official CBS (הלמ"ס) "סמל יישוב" settlement code — never generated.
@@ -71,8 +104,6 @@ model Building {
   entryCode    String?              @map("entry_code")
   name         String               @map("building_name")
   description  String?
-  // Shared join password (hashed). Not in the diagram, but joining needs it.
-  passwordHash String               @map("password_hash")
   createdAt    DateTime             @default(now()) @map("created_at")
   members      BuildingUser[]
   roles        UserRoleAssignment[]
@@ -80,7 +111,9 @@ model Building {
   blocks       BuildingBlock[]
   contactLinks ContactLink[]
   docs         Doc[]
-  messages     Message[]
+  issues       Issue[]
+  payments     Payment[]
+  paymentSettings BuildingPaymentSettings?
 
   @@unique([cityId, address])
   @@map("buildings")
@@ -98,7 +131,7 @@ model User {
   // Onboarding profile (not in the diagram, used by the onboarding flow).
   language      String?
   onboardedAt   DateTime?            @map("onboarded_at")
-  // Profile picture: an uploaded one (file key under UPLOADS_DIR/avatars/) wins over
+  // Profile picture: an uploaded one (S3 key users/<userId>/avatars/) wins over
   // the Google photo URL from the Cognito "picture" claim; initials otherwise.
   avatarSrc     String?              @map("avatar_src")
   googlePicture String?              @map("google_picture")
@@ -110,7 +143,12 @@ model User {
   blocks        BuildingBlock[]      @relation("BlockedUser")
   blocksMade    BuildingBlock[]      @relation("BlockedBy")
   docs          Doc[]
-  messages      Message[]
+  issues        Issue[]
+  issueUpdates  IssueUpdate[]
+  attachments   IssueAttachment[]
+  paymentsPaid  Payment[]            @relation("PaymentPaidBy")
+  paymentsConfirmed Payment[]        @relation("PaymentConfirmedBy")
+  payerOf       Apartment[]          @relation("ApartmentPayer")
 
   @@map("users")
 }
@@ -127,18 +165,16 @@ model UserRoleAssignment {
   @@map("users_roles")
 }
 
-// Membership of a user in a building. Apartments live in `apartments` /
+// Membership of a user in a building — created by building management (adding the
+// user's ID) or by creating the building. Apartments live in `apartments` /
 // `apartment_residents` (a user can hold several apartments in one building).
 model BuildingUser {
-  id                 Int           @id @default(autoincrement())
-  buildingId         String        @map("building_id") @db.Uuid
-  building           Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  userId             String        @map("user_id") @db.Uuid
-  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // What the user said when joining — a suggestion until building management confirms it.
-  requestedApartment Int?          @map("requested_apartment") @db.SmallInt
-  requestedRelation  RelationType? @map("requested_relation")
-  joinedAt           DateTime      @default(now()) @map("joined_at")
+  id         Int      @id @default(autoincrement())
+  buildingId String   @map("building_id") @db.Uuid
+  building   Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt   DateTime @default(now()) @map("joined_at")
 
   @@unique([buildingId, userId])
   @@map("building_users")
@@ -154,10 +190,67 @@ model Apartment {
   sqrm           Int?
   monthlyPayment Int?                @map("monthly_payment")
   paymentMethod  PaymentMethod?      @map("payment_method")
+  // Who pays the fee, chosen by an owner of the apartment. Empty (or no longer linked to the
+  // apartment) = an owner pays; with no owner linked, the renter.
+  payerId        String?             @map("payer_id") @db.Uuid
+  payer          User?               @relation("ApartmentPayer", fields: [payerId], references: [id], onDelete: SetNull)
   residents      ApartmentResident[]
+  payments       Payment[]
 
   @@unique([buildingId, number])
   @@map("apartments")
+}
+
+// One apartment's charge for one month — a permanent log. Rows are deleted only with their
+// building: removing a resident or apartment keeps them (apartment_id -> NULL, the number is
+// copied). `amount` is a snapshot, so changing a fee never rewrites history. No partial
+// payments, and a paid month is final (no undo). provider / external_ref / status are the
+// hooks for a future third-party provider; demo rows leave provider empty.
+model Payment {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buildingId      String        @map("building_id") @db.Uuid
+  building        Building      @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  apartmentId     Int?          @map("apartment_id")
+  apartment       Apartment?    @relation(fields: [apartmentId], references: [id], onDelete: SetNull)
+  apartmentNumber Int           @map("apartment_number") @db.SmallInt
+  // Start of the period: the first day of the month (UTC midnight). A timestamp, not a date, so the
+  // dev-only 5-minute test periods (PAYMENTS_PERIOD_MINUTES) fit too.
+  period          DateTime
+  amount          Int
+  status          PaymentStatus @default(unpaid)
+  paidAt          DateTime?     @map("paid_at")
+  // The apartment's payer (resident) at the time of payment.
+  paidById        String?       @map("paid_by") @db.Uuid
+  paidBy          User?         @relation("PaymentPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  // Who marked it paid: management, or the resident themselves (demo Pay).
+  confirmedById   String?       @map("confirmed_by") @db.Uuid
+  confirmedBy     User?         @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  confirmation    PaymentConfirmation?
+  method          PaymentMethod?
+  provider        String?
+  externalRef     String?       @map("external_ref")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@unique([buildingId, apartmentNumber, period])
+  @@index([buildingId, period])
+  @@map("payments")
+}
+
+// A building's payments setup (one row per building; no row = management hasn't set it up yet).
+model BuildingPaymentSettings {
+  buildingId    String           @id @map("building_id") @db.Uuid
+  building      Building         @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  openMode      PaymentsOpenMode @default(manual) @map("open_mode")
+  // Day of the month (1-28) an automatic month opens; it opens the first time anyone looks on or after it.
+  openDay       Int              @default(1) @map("open_day") @db.SmallInt
+  // Fee for apartments that have none of their own.
+  defaultFee    Int?             @map("default_fee")
+  // Method pre-selected when an apartment has none (card if this is empty too).
+  defaultMethod PaymentMethod?   @map("default_method")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  @@map("building_payment_settings")
 }
 
 // Who lives in / owns an apartment. An apartment can have an owner and a renter.
@@ -168,12 +261,14 @@ model ApartmentResident {
   userId       String       @map("user_id") @db.Uuid
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   relationType RelationType @map("relation_type")
+  // When they were linked to this apartment: a resident sees only that apartment's payments since then.
+  linkedAt     DateTime     @default(now()) @map("linked_at")
 
   @@unique([apartmentId, userId])
   @@map("apartment_residents")
 }
 
-// A user blocked from (re)joining a building until unblocked.
+// A user who can't be added to a building again until unblocked.
 model BuildingBlock {
   id          Int      @id @default(autoincrement())
   buildingId  String   @map("building_id") @db.Uuid
@@ -207,7 +302,7 @@ model Doc {
   uploader   User?    @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
   title      String
   uploadDate DateTime @default(now()) @map("upload_date")
-  // Storage key of the file, relative to UPLOADS_DIR (never a user-supplied path).
+  // Storage key of the file, in the S3 bucket: buildings/<buildingId>/images|documents/<uuid>-<name> (never a user-supplied path).
   src        String
   fileName   String   @map("file_name")
   mimeType   String   @map("mime_type")
@@ -217,18 +312,64 @@ model Doc {
   @@map("docs")
 }
 
-model Message {
-  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  buildingId  String      @map("building_id") @db.Uuid
-  building    Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+// A problem a resident reports; building management moves it through statuses.
+model Issue {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  buildingId      String            @map("building_id") @db.Uuid
+  building        Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   // Null once the author deleted their account ("Former resident").
-  authorId    String?     @map("author") @db.Uuid
-  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  type        MessageType @default(general)
-  title       String
-  description String?
-  uploadDate  DateTime    @default(now()) @map("upload_date")
+  authorId        String?           @map("author") @db.Uuid
+  author          User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  title           String
+  description     String?
+  status          IssueStatus       @default(opened)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  statusChangedAt DateTime          @default(now()) @map("status_changed_at")
+  // The author's last "ping" (once a week) — bumps the issue back up the list.
+  lastPingedAt    DateTime?         @map("last_pinged_at")
+  updates         IssueUpdate[]
+  attachments     IssueAttachment[]
 
-  @@index([buildingId, uploadDate])
-  @@map("messages")
+  @@index([buildingId, createdAt])
+  @@map("issues")
+}
+
+// One status change by building management, with its required note.
+model IssueUpdate {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueId     String            @map("issue_id") @db.Uuid
+  issue       Issue             @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId    String?           @map("author") @db.Uuid
+  author      User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  fromStatus  IssueStatus       @map("from_status")
+  toStatus    IssueStatus       @map("to_status")
+  text        String
+  createdAt   DateTime          @default(now()) @map("created_at")
+  // Set when its author took it back within the 5-minute undo window. Hidden from the history;
+  // the row and its files are kept as the author's editable draft until the window after this passes.
+  undoneAt    DateTime?         @map("undone_at")
+  attachments IssueAttachment[]
+
+  @@index([issueId, createdAt])
+  @@map("issue_updates")
+}
+
+// A picture or file on an issue: on the original report (updateId null) or on a status change.
+model IssueAttachment {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  issueId    String       @map("issue_id") @db.Uuid
+  issue      Issue        @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  updateId   String?      @map("update_id") @db.Uuid
+  update     IssueUpdate? @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  uploaderId String?      @map("uploader") @db.Uuid
+  uploader   User?        @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  // S3 key: buildings/<buildingId>/images|documents/<uuid>-<name>.
+  src        String
+  fileName   String       @map("file_name")
+  mimeType   String       @map("mime_type")
+  sizeBytes  Int          @map("size_bytes")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  @@index([issueId])
+  @@map("issue_attachments")
 }

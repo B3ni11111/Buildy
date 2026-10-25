@@ -7,12 +7,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Put,
-  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
 import { MAX_AVATAR_BYTES, UsersService, toCurrentUser } from './users.service.js';
 import { UpdateOnboardingDto, UpdateProfileDto } from './dto/update-onboarding.dto.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
@@ -56,12 +54,7 @@ export class UsersController {
   }
 
   @Get(':id/avatar')
-  async avatar(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Res() res: Response) {
-    const { path, mimeType } = await this.usersService.avatarFile(user, id);
-    res.type(mimeType);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    // Clients request `?v=<picture version>`: a new picture is a new URL, so this can be cached for good.
-    res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-    res.sendFile(path);
+  avatar(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.avatarFile(user, id);
   }
 }

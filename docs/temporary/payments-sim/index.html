@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buildy payments sandbox</title>
+<style>
+  :root{--bg:#faf8f5;--card:#fff;--ink:#1f1d1a;--mute:#8a847b;--line:#ece7df;--accent:#c4623b;--ok:#4f7a5a;--warn:#b8892b;--bad:#b3442f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Georgia,'Times New Roman',serif}
+  .sans,button,input,select,table,.pill,label{font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 16px 80px}
+  header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:20px}
+  h1{font-size:26px;margin:0;font-weight:500}
+  h2{font-size:18px;margin:0 0 12px;font-weight:500}
+  .sub{color:var(--mute);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+  input,select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;color:var(--ink)}
+  input[type=number]{width:110px}
+  button{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:999px;padding:8px 16px;font-size:13px;cursor:pointer}
+  button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  button.accent{background:var(--accent);border-color:var(--accent)}
+  button.sm{padding:4px 12px;font-size:12px}
+  button:disabled{opacity:.35;cursor:default}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:#fff}
+  .seg button{background:transparent;color:var(--mute);border:0}
+  .seg button.on{background:var(--ink);color:#fff}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-weight:500;font-size:12px;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--line)}
+  td{padding:8px;border-bottom:1px solid var(--line)}
+  tr:last-child td{border-bottom:0}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px}
+  .unpaid{background:#efece6;color:var(--mute)}
+  .pending{background:#f6ead0;color:var(--warn)}
+  .approved{background:#e0ece2;color:var(--ok)}
+  .overdue{background:#f4dcd5;color:var(--bad)}
+  .bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;display:flex}
+  .bar i{display:block;height:100%}
+  .big{font-size:34px;line-height:1.1}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .notif{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .notif:last-child{border:0}
+  .modal{position:fixed;inset:0;background:rgba(31,29,26,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal .card{max-width:360px;width:100%;margin:0}
+  .hint{color:var(--mute);font-size:13px;margin-top:8px}
+  .sim{border-style:dashed;background:transparent}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const KEY='buildy-payments-sandbox-v1';
+const seed=()=>({
+  role:'head', me:'a3',
+  today:'2026-11-01',
+  apts:[
+    {id:'a1',name:'Apt 1',who:'Dana Levi',sqm:62},
+    {id:'a2',name:'Apt 2',who:'Omer Katz',sqm:80},
+    {id:'a3',name:'Apt 3',who:'Noa Barak',sqm:55},
+    {id:'a4',name:'Apt 4',who:'Yossi Cohen',sqm:95},
+    {id:'a5',name:'Apt 5',who:'Lior Mizrahi',sqm:70},
+    {id:'a6',name:'Apt 6',who:'Tamar Peretz',sqm:48},
+    {id:'a7',name:'Apt 7',who:'Avi Shapiro',sqm:110},
+    {id:'a8',name:'Apt 8',who:'Michal Dahan',sqm:66},
+  ],
+  cycle:{total:4800,due:'2026-11-10',calc:'equal',manual:{},sent:false,month:'November 2026'},
+  pay:{}, // aptId -> {status:'pending'|'approved', amount}
+  notifs:[]
+});
+let S; try{S=JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){S=seed()}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=s=>document.querySelector(s);
+const fmt=n=>'₪'+Math.round(n).toLocaleString('en-US');
+const dfmt=d=>new Date(d+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+
+function amountFor(a){
+  const c=S.cycle,n=S.apts.length;
+  if(c.calc==='equal')return c.total/n;
+  if(c.calc==='sqm')return c.total*a.sqm/S.apts.reduce((s,x)=>s+x.sqm,0);
+  return +c.manual[a.id]||0;
+}
+function due(a){const p=S.pay[a.id];return p?p.amount:Math.round(amountFor(a))}
+function status(a){
+  const p=S.pay[a.id];
+  if(p)return p.status;
+  return S.today>S.cycle.due?'overdue':'unpaid';
+}
+const label={unpaid:'Unpaid',pending:'Pending approval',approved:'Approved',overdue:'Overdue'};
+const pill=s=>`<span class="pill ${s}">${label[s]}</span>`;
+function notify(to,text){S.notifs.unshift({to,text,ts:S.today})}
+
+function act(fn){fn();save();render()}
+window.A={
+  role:r=>act(()=>S.role=r),
+  me:v=>act(()=>S.me=v),
+  today:v=>act(()=>S.today=v),
+  calc:v=>act(()=>S.cycle.calc=v),
+  total:v=>act(()=>S.cycle.total=+v||0),
+  dueDate:v=>act(()=>S.cycle.due=v),
+  manual:(id,v)=>act(()=>S.cycle.manual[id]=+v||0),
+  send:()=>act(()=>{
+    S.cycle.sent=true;
+    S.apts.filter(a=>!S.pay[a.id]).forEach(a=>notify(a.id,`${S.cycle.month}: ${fmt(due(a))} is due by ${dfmt(S.cycle.due)}.`));
+  }),
+  remind:()=>act(()=>{
+    S.apts.filter(a=>['unpaid','overdue'].includes(status(a))).forEach(a=>notify(a.id,
+      status(a)==='overdue'?`Reminder: your ${fmt(due(a))} payment was due ${dfmt(S.cycle.due)} and is overdue.`:`Reminder: ${fmt(due(a))} is due by ${dfmt(S.cycle.due)}.`));
+  }),
+  approve:id=>act(()=>{S.pay[id].status='approved';notify(id,`Your payment of ${fmt(S.pay[id].amount)} was approved. Thank you!`)}),
+  approveAll:()=>act(()=>S.apts.forEach(a=>{if(S.pay[a.id]?.status==='pending'){S.pay[a.id].status='approved';notify(a.id,`Your payment of ${fmt(S.pay[a.id].amount)} was approved. Thank you!`)}})),
+  openPay:()=>{$('#modal').style.display='flex'},
+  closePay:()=>{$('#modal').style.display='none'},
+  pay:()=>act(()=>{const a=S.apts.find(x=>x.id===S.me);S.pay[a.id]={status:'pending',amount:due(a)}}),
+  reset:()=>{if(confirm('Reset the whole sandbox?')){S=seed();save();render()}}
+};
+
+function head(){
+  const c=S.cycle;
+  const rows=S.apts.map(a=>{
+    const st=status(a);
+    return `<tr>
+      <td>${a.name}<div class="sub">${a.who}</div></td>
+      <td class="num">${a.sqm} m²</td>
+      <td class="num">${c.calc==='manual'&&!S.pay[a.id]
+        ?`<input type="number" value="${c.manual[a.id]??''}" placeholder="0" onchange="A.manual('${a.id}',this.value)">`
+        :fmt(due(a))}</td>
+      <td>${pill(st)}</td>
+      <td class="num">${st==='pending'?`<button class="sm accent" onclick="A.approve('${a.id}')">Approve</button>`:''}</td>
+    </tr>`}).join('');
+  const approved=S.apts.filter(a=>status(a)==='approved').reduce((s,a)=>s+due(a),0);
+  const pending=S.apts.filter(a=>status(a)==='pending').reduce((s,a)=>s+due(a),0);
+  const planned=S.apts.reduce((s,a)=>s+due(a),0);
+  const target=c.total;
+  const pct=v=>target?Math.min(100,v/target*100):0;
+  const nPending=S.apts.filter(a=>status(a)==='pending').length;
+  const nOver=S.apts.filter(a=>status(a)==='overdue').length;
+  return `
+  <div class="card">
+    <h2>Building budget · ${c.month}</h2>
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <div class="big">${fmt(approved)} <span class="sub sans">of ${fmt(target)} target</span></div>
+      <div class="sub sans">${fmt(pending)} waiting for approval</div>
+    </div>
+    <div class="bar" style="margin-top:12px"><i style="width:${pct(approved)}%;background:var(--ok)"></i><i style="width:${pct(pending)}%;background:var(--warn)"></i></div>
+    <div class="hint sans">Green = approved and in the budget. Amber = paid, not yet approved.</div>
+  </div>
+
+  <div class="card">
+    <h2>This month's payment</h2>
+    <div class="row">
+      <label>Total to collect (₪)<input type="number" value="${c.total}" onchange="A.total(this.value)"></label>
+      <label>Due date<input type="date" value="${c.due}" onchange="A.dueDate(this.value)"></label>
+      <label>Calculator
+        <select onchange="A.calc(this.value)">
+          <option value="equal" ${c.calc==='equal'?'selected':''}>Equal split</option>
+          <option value="sqm" ${c.calc==='sqm'?'selected':''}>By apartment size (m²)</option>
+          <option value="manual" ${c.calc==='manual'?'selected':''}>Manual per apartment</option>
+        </select></label>
+      <button class="accent" onclick="A.send()">${c.sent?'Re-send notifications':'Send notifications'}</button>
+      <button class="ghost" onclick="A.remind()">Remind unpaid</button>
+    </div>
+    ${c.calc==='manual'&&planned!==target?`<div class="hint sans">Manual amounts add up to ${fmt(planned)}, ${planned>target?fmt(planned-target)+' over':fmt(target-planned)+' short of'} the total.</div>`:''}
+    ${c.sent?'':`<div class="hint sans">Residents are not notified until you send.</div>`}
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 style="margin:0">Apartments <span class="sub sans">· ${nPending} pending · ${nOver} overdue</span></h2>
+      <button class="sm ghost" ${nPending?'':'disabled'} onclick="A.approveAll()">Approve all pending</button>
+    </div>
+    <table><thead><tr><th>Apartment</th><th class="num">Size</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
+}
+
+function resident(){
+  const a=S.apts.find(x=>x.id===S.me), st=status(a);
+  const mine=S.notifs.filter(n=>n.to===a.id);
+  const approved=S.apts.filter(x=>status(x)==='approved').reduce((s,x)=>s+due(x),0);
+  const unpaidMsg=S.cycle.sent?'':`<div class="hint sans">Your committee head hasn't sent this month's payment yet.</div>`;
+  return `
+  <div class="row" style="margin-bottom:16px"><label>Viewing as<select onchange="A.me(this.value)">${S.apts.map(x=>`<option value="${x.id}" ${x.id===S.me?'selected':''}>${x.name} · ${x.who}</option>`).join('')}</select></label></div>
+  <div class="card">
+    <div class="sub sans">${S.cycle.month} · ${a.name}</div>
+    <div class="big" style="margin:6px 0">${fmt(due(a))}</div>
+    <div class="row" style="align-items:center;gap:10px">${pill(st)}<span class="sub sans">due ${dfmt(S.cycle.due)}</span></div>
+    <div style="margin-top:16px">
+      ${st==='unpaid'||st==='overdue'?`<button class="accent" onclick="A.openPay()" ${S.cycle.sent?'':'disabled'}>Pay ${fmt(due(a))}</button>`:''}
+      ${st==='pending'?`<div class="hint sans">Payment sent. Waiting for the committee head to approve it.</div>`:''}
+      ${st==='approved'?`<div class="hint sans">All set for this month.</div>`:''}
+      ${unpaidMsg}
+    </div>
+  </div>
+  <div class="card"><h2>Building budget</h2>
+    <div class="bar"><i style="width:${S.cycle.total?Math.min(100,approved/S.cycle.total*100):0}%;background:var(--ok)"></i></div>
+    <div class="hint sans">${fmt(approved)} collected of ${fmt(S.cycle.total)} this month.</div></div>
+  <div class="card"><h2>Notifications</h2>
+    ${mine.length?mine.map(n=>`<div class="notif">${n.text}<div class="sub sans">${dfmt(n.ts)}</div></div>`).join(''):'<div class="sub sans">Nothing yet.</div>'}
+  </div>
+  <div class="modal" id="modal" style="display:none"><div class="card">
+    <h2>Pay ${fmt(due(a))}</h2>
+    <div class="sub sans" style="margin-bottom:12px">Simulated checkout. No real card is used.</div>
+    <label>Card number<input value="4242 4242 4242 4242" readonly></label>
+    <div class="row" style="margin-top:16px"><button class="accent" onclick="A.closePay();A.pay()">Pay now</button><button class="ghost" onclick="A.closePay()">Cancel</button></div>
+  </div></div>`;
+}
+
+function render(){
+  $('#app').innerHTML=`
+  <header>
+    <div><h1>Buildy payments sandbox</h1><div class="sub sans">A standalone play space. Not connected to the real app. Data stays in this browser.</div></div>
+    <div class="row" style="align-items:center">
+      <div class="seg"><button class="${S.role==='head'?'on':''}" onclick="A.role('head')">Committee head</button><button class="${S.role==='res'?'on':''}" onclick="A.role('res')">Resident</button></div>
+    </div>
+  </header>
+  <div class="card sim"><div class="row" style="align-items:center">
+    <label>Simulated today<input type="date" value="${S.today}" onchange="A.today(this.value)"></label>
+    <span class="sub sans" style="flex:1">Move past the due date to see unpaid apartments turn overdue.</span>
+    <button class="ghost sm" onclick="A.reset()">Reset sandbox</button>
+  </div></div>
+  ${S.role==='head'?head():resident()}`;
+}
+render();
+</script>
+</body>
+</html>

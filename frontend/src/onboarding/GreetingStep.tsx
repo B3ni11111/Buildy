@@ -44,7 +44,7 @@ export default function GreetingStep({ onContinue }: { onContinue: () => void })
           key={index}
           className="ob-hello-word"
           sx={{
-            fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+            fontFamily: '"Rubik", system-ui, sans-serif',
             fontSize: { xs: '3rem', sm: '3.75rem' },
             fontWeight: 500,
             color: 'primary.main',

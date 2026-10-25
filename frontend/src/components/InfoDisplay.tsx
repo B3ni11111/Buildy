@@ -30,7 +30,7 @@ function InfoDisplay({ onReset }: InfoDisplayProps) {
                 <Typography
                   variant="h4"
                   sx={{
-                    fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                    fontFamily: '"Rubik", system-ui, sans-serif',
                     fontWeight: 600,
                     mb: 0.5,
                   }}

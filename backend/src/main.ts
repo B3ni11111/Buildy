@@ -11,6 +11,9 @@ async function bootstrap() {
   const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',');
   app.enableCors({ origin: corsOrigins });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  if (process.env.DEV_LOGIN === 'true') {
+    console.warn('⚠ DEV_LOGIN is on: anyone can sign in as a seeded mock user. Local development only.');
+  }
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();

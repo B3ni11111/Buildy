@@ -1,12 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UpdateOnboardingDto, UpdateProfileDto } from './dto/update-onboarding.dto.js';
 import type { AuthUser } from '../auth/auth-user.type.js';
-import { uploadPath, type UploadedFileData } from '../uploads/uploads.js';
+import { avatarKey, presignGet, putObject, removeUploads, type UploadedFileData } from '../uploads/uploads.js';
 import { effectiveAdmin } from '../auth/request-context.js';
 
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -85,19 +82,16 @@ export class UsersService {
     if (!file) throw new BadRequestException('No file uploaded');
     const ext = AVATAR_TYPES[file.mimetype];
     if (!ext) throw new BadRequestException('Profile pictures must be PNG, JPEG, WebP or GIF');
-    // New file name per upload, so clients see a new version and refetch.
-    const key = `avatars/${user.id}-${randomUUID()}${ext}`;
-    const path = uploadPath(key);
-    await mkdir(join(path, '..'), { recursive: true });
-    await writeFile(path, file.buffer);
+    // New key per upload (uuid), so clients see a new version and refetch.
+    const key = await putObject(avatarKey(user.id, `profile${ext}`), file);
     const updated = await this.prisma.user.update({ where: { id: user.id }, data: { avatarSrc: key } });
-    if (user.avatarSrc) await rm(uploadPath(user.avatarSrc), { force: true });
+    if (user.avatarSrc) await removeUploads([user.avatarSrc]);
     return updated;
   }
 
   async removeAvatar(authUser: AuthUser) {
     const user = await this.findOrCreate(authUser);
-    if (user.avatarSrc) await rm(uploadPath(user.avatarSrc), { force: true });
+    if (user.avatarSrc) await removeUploads([user.avatarSrc]);
     return this.prisma.user.update({ where: { id: user.id }, data: { avatarSrc: null } });
   }
 
@@ -114,18 +108,18 @@ export class UsersService {
     }
     const ext = target.avatarSrc.slice(target.avatarSrc.lastIndexOf('.'));
     const mimeType = Object.keys(AVATAR_TYPES).find((type) => AVATAR_TYPES[type] === ext) ?? 'application/octet-stream';
-    return { path: uploadPath(target.avatarSrc), mimeType };
+    return presignGet(target.avatarSrc, mimeType);
   }
 
   /**
    * Deletes the account: personal data, memberships, roles, apartment links and the picture.
-   * Their messages and documents stay, with the author set to null ("Former resident").
+   * Their issues and documents stay, with the author set to null ("Former resident").
    * The Cognito login itself remains; signing in again starts a fresh, empty account.
    */
   async deleteAccount(authUser: AuthUser) {
     const user = await this.findOrCreate(authUser);
     await this.prisma.user.delete({ where: { id: user.id } });
-    if (user.avatarSrc) await rm(uploadPath(user.avatarSrc), { force: true });
+    if (user.avatarSrc) await removeUploads([user.avatarSrc]);
     return { ok: true };
   }
 }

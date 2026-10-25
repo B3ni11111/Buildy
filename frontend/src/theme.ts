@@ -2,31 +2,90 @@ import { alpha, createTheme, type Theme } from '@mui/material';
 
 export type ColorMode = 'light' | 'dark';
 
-// Light: classic, minimal — a muted forest green anchor on warm neutral grays.
-// Dark: modelled on the AWS console's dark mode — deep navy surfaces and cool
-// gray text — keeping buildy's green as the accent.
+// Soft tiles (Option C): warm stone page, forest green accent, and each home section filled with its
+// own pastel. Dark keeps the same warmth: charcoal page, every section a deep tint of its colour.
 const PALETTES = {
   light: {
     primary: { main: '#3A5A40', light: '#6B8F71', dark: '#2A4030', contrastText: '#FFFFFF' },
-    secondary: { main: '#5B6660' },
-    background: { default: '#F7F6F3', paper: '#FFFFFF' },
-    text: { primary: '#22261F', secondary: '#5B6660' },
-    divider: '#E3E2DB',
-    shadow: 'rgba(20, 24, 18, 0.06)',
+    secondary: { main: '#6B716C' },
+    background: { default: '#F2F0EA', paper: '#FFFFFF' },
+    text: { primary: '#1F2421', secondary: '#5F665F' },
+    divider: '#E3E0D7',
+    shadow: 'rgba(40, 36, 28, 0.06)',
   },
   dark: {
-    // buildy's forest green, lifted so it stays readable on navy.
-    primary: { main: '#7FB685', light: '#A8D0AD', dark: '#5C8F63', contrastText: '#0F1B2A' },
-    secondary: { main: '#8D99A8' },
-    background: { default: '#0F1B2A', paper: '#192534' },
-    text: { primary: '#E9EBED', secondary: '#9BA7B6' },
-    divider: '#414D5C',
-    shadow: 'rgba(0, 7, 22, 0.45)',
+    // buildy's forest green, lifted so it stays readable on charcoal.
+    primary: { main: '#9DCB9F', light: '#BFE0C0', dark: '#6FA374', contrastText: '#121613' },
+    secondary: { main: '#9AA39B' },
+    background: { default: '#121613', paper: '#1D221E' },
+    text: { primary: '#ECEAE3', secondary: '#A3AAA2' },
+    divider: '#2E352F',
+    shadow: 'rgba(0, 0, 0, 0.45)',
   },
 } as const;
 
-const SERIF = '"Georgia","Iowan Old Style","Palatino Linotype",serif';
-const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+// Rubik covers Latin, Hebrew and Cyrillic in one family (loaded in index.html).
+export const FONT = '"Rubik", system-ui, -apple-system, "Segoe UI", sans-serif';
+
+/** The home sections, each with a fixed colour that means the same thing everywhere. */
+export type TileSection = 'payments' | 'issues' | 'docs' | 'members' | 'building' | 'apartments';
+
+const TILES: Record<ColorMode, Record<TileSection, { bg: string; ink: string }>> = {
+  light: {
+    payments: { bg: '#DDE8D9', ink: '#22402A' },
+    issues: { bg: '#F3E6CC', ink: '#5E4210' },
+    docs: { bg: '#DCE9F2', ink: '#1F4460' },
+    members: { bg: '#E8E1EE', ink: '#4A3560' },
+    building: { bg: '#FFFFFF', ink: '#1F2421' },
+    apartments: { bg: '#FFFFFF', ink: '#1F2421' },
+  },
+  dark: {
+    payments: { bg: '#22382A', ink: '#DDEBD9' },
+    issues: { bg: '#3A3020', ink: '#F1DDB2' },
+    docs: { bg: '#1D2E3A', ink: '#CFE2F0' },
+    members: { bg: '#2E2638', ink: '#E3D6EE' },
+    building: { bg: '#1D221E', ink: '#ECEAE3' },
+    apartments: { bg: '#1D221E', ink: '#ECEAE3' },
+  },
+};
+
+/** A section's fill and text colour (for previews; tiles themselves use tileVars). */
+export function tileColors(mode: ColorMode, section: TileSection) {
+  return TILES[mode][section];
+}
+
+/** "#22402A" -> "34 64 42", the form MUI's *Channel variables expect. */
+function channel(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+}
+
+/**
+ * CSS variables that recolour everything inside one home tile: its paper, text, dividers and accent
+ * take the section's colours, and inner corners get smaller. Dialogs opened from a tile render outside
+ * it, so they keep the normal look.
+ */
+export function tileVars(mode: ColorMode, section: TileSection): Record<string, string> {
+  const { bg, ink } = TILES[mode][section];
+  return {
+    '--mui-palette-background-paper': bg,
+    '--mui-palette-background-paperChannel': channel(bg),
+    '--mui-palette-text-primary': ink,
+    '--mui-palette-text-primaryChannel': channel(ink),
+    '--mui-palette-text-secondary': alpha(ink, 0.74),
+    '--mui-palette-text-secondaryChannel': channel(ink),
+    '--mui-palette-divider': alpha(ink, 0.16),
+    '--mui-palette-dividerChannel': channel(ink),
+    '--mui-palette-primary-main': ink,
+    '--mui-palette-primary-mainChannel': channel(ink),
+    '--mui-palette-primary-light': ink,
+    '--mui-palette-primary-dark': ink,
+    '--mui-palette-primary-contrastText': bg,
+    '--mui-palette-primary-contrastTextChannel': channel(bg),
+    '--mui-shape-borderRadius': '4px',
+    color: ink,
+  };
+}
 
 // Direction is threaded through so Hebrew/Arabic mirror correctly.
 export function getTheme(direction: 'ltr' | 'rtl', mode: ColorMode): Theme {
@@ -34,6 +93,8 @@ export function getTheme(direction: 'ltr' | 'rtl', mode: ColorMode): Theme {
   const accent = p.primary.main;
 
   return createTheme({
+    // Colours and corners resolve through CSS variables, so a home tile can recolour its own content.
+    cssVariables: true,
     direction,
     palette: {
       mode,
@@ -47,26 +108,25 @@ export function getTheme(direction: 'ltr' | 'rtl', mode: ColorMode): Theme {
       borderRadius: 14,
     },
     typography: {
-      fontFamily: SANS,
-      h1: { fontFamily: SERIF, fontSize: '2.5rem', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.01em' },
-      h2: { fontFamily: SERIF, fontSize: '2rem', fontWeight: 600, lineHeight: 1.3 },
-      h3: { fontFamily: SANS, fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3 },
-      h4: { fontFamily: SANS, fontSize: '1.125rem', fontWeight: 600, lineHeight: 1.4 },
+      fontFamily: FONT,
+      h1: { fontSize: '2.5rem', fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.02em' },
+      h2: { fontSize: '2rem', fontWeight: 600, lineHeight: 1.3, letterSpacing: '-0.01em' },
+      h3: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3 },
+      h4: { fontSize: '1.125rem', fontWeight: 600, lineHeight: 1.4 },
       body1: { fontSize: '1rem', lineHeight: 1.6, fontWeight: 400 },
       body2: { fontSize: '0.875rem', lineHeight: 1.5, fontWeight: 400 },
     },
     components: {
+      // Opening a dialog or menu must not hide the page scrollbar: that changes the page width and
+      // makes the grid (and everything else) jump sideways. The page simply stays scrollable behind it.
+      MuiModal: { defaultProps: { disableScrollLock: true } },
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
           root: {
-            borderRadius: 10,
+            borderRadius: 12,
             transition: 'all 0.2s ease',
-            '&:hover': { transform: 'translateY(-1px)' },
-          },
-          contained: {
-            boxShadow: `0 2px 8px ${alpha(accent, 0.12)}`,
-            '&:hover': { boxShadow: `0 4px 16px ${alpha(accent, 0.16)}` },
+            '&:active': { transform: 'scale(0.98)' },
           },
         },
       },
@@ -82,7 +142,6 @@ export function getTheme(direction: 'ltr' | 'rtl', mode: ColorMode): Theme {
           root: {
             boxShadow: `0 1px 3px ${p.shadow}, 0 4px 12px ${p.shadow}`,
             transition: 'all 0.2s ease',
-            '&:hover': { boxShadow: `0 2px 6px ${p.shadow}, 0 8px 20px ${p.shadow}` },
           },
         },
       },

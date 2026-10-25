@@ -20,29 +20,59 @@ export type TranslationKey =
   | 'home.signInPrompt'
   | 'home.signInButton'
   | 'dashboard.welcome'
+  | 'summary.open'
+  | 'summary.nothingOpen'
+  | 'summary.seeAll'
+  | 'summary.ofGoal'
+  | 'summary.notOpened'
+  | 'summary.yourPart'
+  | 'summary.allPaid'
+  | 'summary.details'
+  | 'summary.people'
+  | 'summary.managedBy'
+  | 'nav.home'
+  | 'nav.issues'
+  | 'nav.money'
+  | 'nav.docs'
+  | 'nav.people'
+  | 'nav.label'
+  | 'language.partial'
+  | 'layout.presetsTitle'
+  | 'layout.preset.head'
+  | 'layout.preset.resident'
+  | 'layout.preset.essentials'
+  | 'layout.preset.everything'
+  | 'layout.presetDesc.head'
+  | 'layout.presetDesc.resident'
+  | 'layout.presetDesc.essentials'
+  | 'layout.presetDesc.everything'
+  | 'layout.presetConfirmTitle'
+  | 'layout.presetConfirmText'
+  | 'layout.presetApply'
+  | 'payments.slideToPay'
+  | 'payments.sending'
+  | 'payments.paidThanks'
+  | 'door.hold'
+  | 'door.tapToCopy'
+  | 'door.copied'
+  | 'greeting.morning'
+  | 'greeting.afternoon'
+  | 'greeting.evening'
+  | 'greeting.night'
   | 'dashboard.quickActions'
   | 'dashboard.reportIssue'
   | 'dashboard.building'
-  | 'dashboard.messages'
-  | 'dashboard.noMessages'
-  | 'dashboard.noMessagesOfType'
-  | 'dashboard.newMessage'
   | 'dashboard.filterAll'
-  | 'dashboard.messageTypeLabel'
-  | 'dashboard.messageTitleLabel'
-  | 'dashboard.messageDescriptionLabel'
-  | 'dashboard.postMessage'
-  | 'dashboard.postMessageError'
   | 'dashboard.entryCode'
   | 'dashboard.memberCount'
   | 'dashboard.contacts'
-  | 'messageType.general'
-  | 'messageType.urgent'
-  | 'messageType.maintenance'
   | 'contactType.whatsapp'
   | 'contactType.phone'
   | 'contactType.email'
   | 'myUnit.title'
+  | 'myUnit.titleOne'
+  | 'myUnit.center'
+  | 'myUnit.centerSoon'
   | 'myUnit.empty'
   | 'myUnit.apartment'
   | 'myUnit.floor'
@@ -54,14 +84,8 @@ export type TranslationKey =
   | 'relationType.tenant'
   | 'paymentMethod.cash'
   | 'paymentMethod.transfer'
-  | 'paymentMethod.bit'
-  | 'paymentMethod.paybox'
-  | 'joinBuilding.title'
-  | 'joinBuilding.subtitle'
-  | 'joinBuilding.passwordLabel'
-  | 'joinBuilding.wrongPassword'
-  | 'joinBuilding.genericError'
-  | 'joinBuilding.confirm'
+  | 'paymentMethod.bit_paybox'
+  | 'paymentMethod.card'
   | 'settings.title'
   | 'settings.subtitle'
   | 'settings.email'
@@ -87,10 +111,6 @@ export type TranslationKey =
   | 'settings.leaveConfirmInstruction'
   | 'settings.leaveConfirmPlaceholder'
   | 'common.delete'
-  | 'messages.editTitle'
-  | 'messages.deleteTitle'
-  | 'messages.deleteBody'
-  | 'messages.actionError'
   | 'admin.sectionTitle'
   | 'admin.sectionDescription'
   | 'admin.openPanel'
@@ -99,17 +119,23 @@ export type TranslationKey =
   | 'admin.stats'
   | 'admin.noBuildings'
   | 'admin.editBuilding'
+  | 'admin.join'
+  | 'admin.joinAs'
+  | 'admin.joined'
+  | 'admin.joinHint'
+  | 'admin.openBuilding'
+  | 'admin.openJoinFirst'
+  | 'admin.tabApartments'
+  | 'admin.apartmentsEmpty'
   | 'admin.deleteTitle'
   | 'admin.deleteBody'
   | 'admin.deleteConfirmInstruction'
   | 'admin.saveError'
   | 'admin.duplicateError'
-  | 'admin.passwordKeep'
   | 'admin.identityAdminOnly'
   | 'admin.fieldName'
   | 'admin.fieldCity'
   | 'admin.fieldAddress'
-  | 'admin.fieldPassword'
   | 'admin.fieldDescription'
   | 'wizard.name.title'
   | 'wizard.name.subtitle'
@@ -122,9 +148,6 @@ export type TranslationKey =
   | 'wizard.address.placeholder'
   | 'wizard.details.title'
   | 'wizard.details.subtitle'
-  | 'wizard.password.title'
-  | 'wizard.password.subtitle'
-  | 'wizard.password.placeholder'
   | 'wizard.review.title'
   | 'wizard.review.subtitle'
   | 'wizard.review.create'
@@ -198,15 +221,11 @@ export type TranslationKey =
   | 'admin.backToApp'
   | 'admin.tabOverview'
   | 'admin.tabMembers'
-  | 'admin.tabMessages'
   | 'admin.tabDocuments'
   | 'role.management_company'
   | 'members.management'
   | 'common.formerResident'
   | 'dashboard.editDetails'
-  | 'dashboard.joinAnother'
-  | 'joinBuilding.blocked'
-  | 'joinBuilding.tooManyTries'
   | 'layout.sectionTitle'
   | 'layout.editToggle'
   | 'layout.editToggleHint'
@@ -215,6 +234,123 @@ export type TranslationKey =
   | 'layout.done'
   | 'layout.editingHint'
   | 'layout.dragHandle'
+  | 'footer.feedback'
+  | 'footer.privacy'
+  | 'footer.terms'
+  | 'footer.copyright'
+  | 'footer.comingSoon'
+  | 'footer.back'
+  | 'footer.infoTitle'
+  | 'footer.infoBody'
+  | 'feedback.title'
+  | 'feedback.widgetTitle'
+  | 'feedback.label'
+  | 'feedback.hint'
+  | 'feedback.send'
+  | 'feedback.thanks'
+  | 'widgets.add'
+  | 'widgets.menuTitle'
+  | 'widgets.empty'
+  | 'widgets.remove'
+  | 'widgets.allAdded'
+  | 'widgets.wantMore'
+  | 'widgets.tellUs'
+  | 'widgets.emptyHome'
+  | 'widgets.tile.building'
+  | 'widgets.tile.apartments'
+  | 'widgets.tile.members'
+  | 'widgets.tile.issues'
+  | 'widgets.tile.docs'
+  | 'widgets.desc.building'
+  | 'widgets.desc.apartments'
+  | 'widgets.desc.members'
+  | 'widgets.desc.issues'
+  | 'widgets.desc.docs'
+  | 'layout.resetConfirmTitle'
+  | 'layout.resetConfirmText'
+  | 'widgets.removeConfirmTitle'
+  | 'widgets.removeConfirmText'
+  | 'widgets.removeConfirmAction'
+  | 'widgets.tile.payments'
+  | 'widgets.desc.payments'
+  | 'payments.budget'
+  | 'payments.myPart'
+  | 'payments.collected'
+  | 'payments.complete'
+  | 'payments.notOpened'
+  | 'payments.notOpenedResident'
+  | 'payments.openMonth'
+  | 'payments.addNew'
+  | 'payments.markAll'
+  | 'payments.markPaid'
+  | 'payments.paid'
+  | 'payments.unpaid'
+  | 'payments.fee'
+  | 'payments.noFee'
+  | 'payments.editFee'
+  | 'payments.feeTitle'
+  | 'payments.feeAmount'
+  | 'payments.scopeOnce'
+  | 'payments.scopePermanent'
+  | 'payments.save'
+  | 'payments.cancel'
+  | 'payments.pay'
+  | 'payments.demoNote'
+  | 'payments.history'
+  | 'payments.noHistory'
+  | 'payments.noApartments'
+  | 'payments.error'
+  | 'payments.confirmTitle'
+  | 'payments.confirmOne'
+  | 'payments.confirmAll'
+  | 'payments.noResidents'
+  | 'payments.setupTitle'
+  | 'payments.setupHint'
+  | 'payments.saveSetup'
+  | 'payments.settings'
+  | 'payments.openMode'
+  | 'payments.openManual'
+  | 'payments.openAuto'
+  | 'payments.openDay'
+  | 'payments.defaultFee'
+  | 'payments.defaultFeeHint'
+  | 'payments.defaultMethod'
+  | 'payments.settingsNextMonth'
+  | 'payments.autoOpensOn'
+  | 'payments.method'
+  | 'payments.log'
+  | 'payments.apartmentLog'
+  | 'payments.logTitleApartment'
+  | 'payments.logEmpty'
+  | 'payments.filterAll'
+  | 'payments.filterMonth'
+  | 'payments.filterApartment'
+  | 'payments.filterMethod'
+  | 'payments.colMonth'
+  | 'payments.colAmount'
+  | 'payments.colStatus'
+  | 'payments.colPaidOn'
+  | 'payments.colPaidBy'
+  | 'payments.colConfirmedBy'
+  | 'payments.colHow'
+  | 'payments.confirmation.single'
+  | 'payments.confirmation.bulk'
+  | 'payments.confirmation.self'
+  | 'payments.confirmation.automatic'
+  | 'payments.payer'
+  | 'payments.payerYou'
+  | 'payments.payerOther'
+  | 'payments.whoPays'
+  | 'payments.whoPaysHint'
+  | 'payments.wizardTitle'
+  | 'payments.wizardSubtitle'
+  | 'widgets.dragHint'
+  | 'docs.chooseFiles'
+  | 'docs.addMore'
+  | 'docs.uploadCount'
+  | 'issues.undo'
+  | 'issues.undoHint'
+  | 'issues.draftRestored'
   | 'members.manage'
   | 'members.manageTitle'
   | 'members.apartmentsTitle'
@@ -226,10 +362,6 @@ export type TranslationKey =
   | 'members.blockedTitle'
   | 'members.blockedBy'
   | 'members.unblock'
-  | 'members.pending'
-  | 'members.approve'
-  | 'members.pendingCount'
-  | 'myUnit.pending'
   | 'myUnit.setByManagement'
   | 'settings.phoneLabel'
   | 'settings.phoneHint'
@@ -248,21 +380,101 @@ export type TranslationKey =
   | 'picture.notImage'
   | 'picture.pendingUpload'
   | 'picture.pendingRemove'
-  | 'setup.title'
-  | 'setup.open'
-  | 'setup.bannerHint'
-  | 'setup.apartmentHint'
-  | 'setup.optionalHint'
-  | 'setup.later'
-  | 'setup.back'
-  | 'setup.skip'
-  | 'setup.finish'
   | 'userMenu.emailVerified'
+  | 'common.skip'
+  | 'themeStep.title'
+  | 'themeStep.subtitle'
+  | 'phoneStep.title'
+  | 'phoneStep.subtitle'
+  | 'pictureStep.title'
+  | 'pictureStep.subtitle'
+  | 'noBuilding.title'
+  | 'noBuilding.explain'
+  | 'noBuilding.idLabel'
+  | 'noBuilding.copy'
+  | 'noBuilding.copied'
+  | 'noBuilding.refresh'
+  | 'noBuilding.aboutTitle'
+  | 'noBuilding.aboutBody'
+  | 'noBuilding.createTitle'
+  | 'noBuilding.createHint'
+  | 'noBuilding.create'
+  | 'dashboard.createBuilding'
+  | 'settings.userIdHint'
+  | 'wizard.role.title'
+  | 'wizard.role.subtitle'
+  | 'wizard.role.label'
+  | 'wizard.residents.title'
+  | 'wizard.residents.subtitle'
+  | 'wizard.duplicateError'
+  | 'residents.addButton'
+  | 'residents.addTitle'
+  | 'residents.addHint'
+  | 'residents.pasteLabel'
+  | 'residents.pasteHint'
+  | 'residents.addToList'
+  | 'residents.lookingUp'
+  | 'residents.noneFound'
+  | 'residents.notFound'
+  | 'residents.lookupError'
+  | 'residents.empty'
+  | 'residents.setForAll'
+  | 'residents.setForAllHint'
+  | 'residents.applyAll'
+  | 'residents.relation'
+  | 'residents.toAdd'
+  | 'residents.removeRow'
+  | 'residents.alreadyMember'
+  | 'residents.blocked'
+  | 'residents.isMe'
+  | 'residents.needApartments'
+  | 'residents.add'
+  | 'residents.addError'
+  | 'issues.title'
+  | 'issues.new'
+  | 'issues.empty'
+  | 'issues.emptyFiltered'
+  | 'issues.titleLabel'
+  | 'issues.descriptionLabel'
+  | 'issues.attach'
+  | 'issues.attachHint'
+  | 'issues.tooMany'
+  | 'issues.post'
+  | 'issues.postError'
+  | 'issues.editTitle'
+  | 'issues.deleteTitle'
+  | 'issues.deleteBody'
+  | 'issues.actionError'
+  | 'issues.status.opened'
+  | 'issues.status.in_process'
+  | 'issues.status.denied'
+  | 'issues.status.resolved'
+  | 'issues.pinged'
+  | 'issues.ping'
+  | 'issues.pingHint'
+  | 'issues.pingAvailable'
+  | 'issues.pingWait'
+  | 'issues.reportedBy'
+  | 'issues.history'
+  | 'issues.noteLabel'
+  | 'issues.noteHint'
+  | 'admin.tabIssues'
+  | 'issues.action.in_process'
+  | 'issues.action.denied'
+  | 'issues.action.resolved'
+  | 'issues.addUpdate'
+  | 'issues.updateLabel'
+  | 'issues.updateHint'
+  | 'issues.send'
+  | 'issues.closed'
+  | 'issues.updateChip'
   | 'userMenu.signOut';
 
 type Dict = Record<TranslationKey, string>;
 
-export const TRANSLATIONS: Record<LanguageCode, Dict> = {
+// English and Hebrew are complete. The other languages may lack newer strings — the app shows the
+// English text for any key missing there (see LanguageContext).
+export const TRANSLATIONS: Record<'en' | 'he', Dict> & Record<Exclude<LanguageCode, 'en' | 'he'>, Partial<Dict>> = {
   en: {
     'common.continue': 'Continue',
     'common.finish': 'Finish',
@@ -283,29 +495,59 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'home.signInPrompt': 'Sign in to view building documents, finances, and notices',
     'home.signInButton': 'Sign In with Google',
     'dashboard.welcome': 'Welcome back, {{name}}',
+    'summary.open': '{{count}} open',
+    'summary.nothingOpen': 'Nothing open',
+    'summary.seeAll': 'See all',
+    'summary.ofGoal': 'of ₪{{goal}} · {{month}}',
+    'summary.notOpened': 'This month is not open yet',
+    'summary.yourPart': 'Your part · {{month}}',
+    'summary.allPaid': 'All paid up',
+    'summary.details': 'Details',
+    'summary.people': '{{count}} people',
+    'summary.managedBy': 'Managed by {{name}}',
+    'nav.home': 'Home',
+    'nav.issues': 'Issues',
+    'nav.money': 'Money',
+    'nav.docs': 'Documents',
+    'nav.people': 'People',
+    'nav.label': 'Sections',
+    'language.partial': 'partial translation',
+    'layout.presetsTitle': 'Start from a layout',
+    'layout.preset.head': 'Committee head',
+    'layout.preset.resident': 'Resident',
+    'layout.preset.essentials': 'Just the essentials',
+    'layout.preset.everything': 'Everything',
+    'layout.presetDesc.head': 'Money and issues first',
+    'layout.presetDesc.resident': 'Your part, the door code and what is being fixed',
+    'layout.presetDesc.essentials': 'Two tiles, nothing else',
+    'layout.presetDesc.everything': 'Every tile, in the usual layout',
+    'layout.presetConfirmTitle': 'Use the “{{name}}” layout?',
+    'layout.presetConfirmText': 'Your current arrangement on this device is replaced. You can still move and resize tiles afterwards.',
+    'layout.presetApply': 'Use this layout',
+    'payments.slideToPay': 'Slide to pay ₪{{amount}}',
+    'payments.sending': 'Sending…',
+    'payments.paidThanks': 'Paid, thank you',
+    'door.hold': 'Hold to show',
+    'door.tapToCopy': 'Tap the code to copy',
+    'door.copied': 'Copied',
+    'greeting.morning': 'Good morning, {{name}}',
+    'greeting.afternoon': 'Good afternoon, {{name}}',
+    'greeting.evening': 'Good evening, {{name}}',
+    'greeting.night': 'Good night, {{name}}',
     'dashboard.quickActions': 'Quick actions',
     'dashboard.reportIssue': 'Report an issue',
     'dashboard.building': 'Building',
-    'dashboard.messages': 'Messages',
-    'dashboard.noMessages': 'No messages yet.',
-    'dashboard.noMessagesOfType': 'No messages of this type.',
-    'dashboard.newMessage': 'New message',
     'dashboard.filterAll': 'All',
-    'dashboard.messageTypeLabel': 'Type',
-    'dashboard.messageTitleLabel': 'Title',
-    'dashboard.messageDescriptionLabel': 'Details (optional)',
-    'dashboard.postMessage': 'Post',
-    'dashboard.postMessageError': "Couldn't post your message. Please try again.",
     'dashboard.entryCode': 'Door code',
     'dashboard.memberCount': '{{count}} residents on buildy',
     'dashboard.contacts': 'Contact the building',
-    'messageType.general': 'General',
-    'messageType.urgent': 'Urgent',
-    'messageType.maintenance': 'Maintenance',
     'contactType.whatsapp': 'WhatsApp group',
     'contactType.phone': 'Phone',
     'contactType.email': 'Email',
     'myUnit.title': 'My apartments',
+    'myUnit.titleOne': 'My apartment',
+    'myUnit.center': 'Apartment center',
+    'myUnit.centerSoon': 'Everything about this apartment will live here soon.',
     'myUnit.empty': "Building management hasn't linked an apartment to you yet.",
     'myUnit.apartment': 'Apartment',
     'myUnit.floor': 'Floor',
@@ -315,23 +557,17 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'myUnit.monthlyPayment': 'Monthly fee',
     'relationType.owner': 'Owner',
     'relationType.tenant': 'Tenant',
+    'paymentMethod.card': 'Credit card',
     'paymentMethod.cash': 'Cash',
     'paymentMethod.transfer': 'Bank transfer',
-    'paymentMethod.bit': 'Bit',
-    'paymentMethod.paybox': 'PayBox',
-    'joinBuilding.title': 'Find your building',
-    'joinBuilding.subtitle': 'Select your building and enter its access password.',
-    'joinBuilding.passwordLabel': 'Building password',
-    'joinBuilding.wrongPassword': 'Incorrect password. Please try again.',
-    'joinBuilding.genericError': "Couldn't join this building. Please try again.",
-    'joinBuilding.confirm': "You're in!",
+    'paymentMethod.bit_paybox': 'Bit / PayBox',
     'settings.title': 'Account Settings',
     'settings.subtitle': 'Manage your profile and account',
     'settings.email': 'Email',
     'settings.emailVerified': 'Email Verified',
     'settings.verified': 'Verified',
     'settings.notVerified': 'Not Verified',
-    'settings.userId': 'User ID',
+    'settings.userId': 'Your ID',
     'settings.backToHome': 'Back to Home',
     'settings.nameLabel': 'Name',
     'settings.languageLabel': 'Language',
@@ -353,10 +589,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'settings.leaveConfirmInstruction': 'Type "{{phrase}}" to confirm.',
     'settings.leaveConfirmPlaceholder': 'Type {{phrase}}',
     'common.delete': 'Delete',
-    'messages.editTitle': 'Edit message',
-    'messages.deleteTitle': 'Delete this message?',
-    'messages.deleteBody': 'It will be removed for everyone in the building.',
-    'messages.actionError': "Couldn't update the message. Please try again.",
     'admin.sectionTitle': 'Admin',
     'admin.sectionDescription': 'Create, edit and delete buildings and their messages.',
     'admin.openPanel': 'Open admin panel',
@@ -365,17 +597,23 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.stats': '{{members}} residents · {{messages}} messages · {{docs}} docs',
     'admin.noBuildings': 'No buildings yet.',
     'admin.editBuilding': 'Edit building',
+    'admin.join': 'Join building',
+    'admin.joinAs': 'Join as {{role}}',
+    'admin.joined': "You're a member here",
+    'admin.joinHint': 'It will show in your building switcher. Your admin powers stay the same.',
+    'admin.openBuilding': 'Open building',
+    'admin.openJoinFirst': "You're not a member yet. Join with a role to open it in the app:",
+    'admin.tabApartments': 'Apartments',
+    'admin.apartmentsEmpty': 'No apartments in this building yet.',
     'admin.deleteTitle': 'Delete {{name}}?',
     'admin.deleteBody': "This permanently deletes the building together with its residents' memberships, messages and documents.",
     'admin.deleteConfirmInstruction': 'Type the building name to confirm.',
     'admin.saveError': "Couldn't save the building. Please try again.",
     'admin.duplicateError': 'A building with this address already exists in this city.',
-    'admin.passwordKeep': 'New password (leave empty to keep the current one)',
     'admin.identityAdminOnly': 'Only an admin can change the name, city and address',
     'admin.fieldName': 'Name',
     'admin.fieldCity': 'City',
     'admin.fieldAddress': 'Address',
-    'admin.fieldPassword': 'Join password',
     'admin.fieldDescription': 'Description',
     'wizard.name.title': 'What is the building called?',
     'wizard.name.subtitle': 'Residents will see this name on their home screen.',
@@ -388,9 +626,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.address.placeholder': 'e.g. 14 Ben Yehuda St',
     'wizard.details.title': 'A few details',
     'wizard.details.subtitle': 'Optional — you can fill these in later.',
-    'wizard.password.title': 'Set a join password',
-    'wizard.password.subtitle': 'Residents enter this password to join the building. Share it only with them.',
-    'wizard.password.placeholder': 'At least 4 characters',
     'wizard.review.title': 'Ready to create?',
     'wizard.review.subtitle': 'Check the details below.',
     'wizard.review.create': 'Create building',
@@ -464,23 +699,136 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.backToApp': 'Back to the app',
     'admin.tabOverview': 'Overview',
     'admin.tabMembers': 'Members',
-    'admin.tabMessages': 'Messages',
     'admin.tabDocuments': 'Documents',
     'role.management_company': 'Management company',
     'members.management': 'Building management',
     'common.formerResident': 'Former resident',
     'dashboard.editDetails': 'Edit details',
-    'dashboard.joinAnother': 'Join another building',
-    'joinBuilding.blocked': "You've been blocked from this building. Contact building management.",
-    'joinBuilding.tooManyTries': 'Too many wrong passwords. Try again in 15 minutes.',
     'layout.sectionTitle': 'Home layout',
     'layout.editToggle': 'Edit home layout',
     'layout.editToggleHint': 'When on, hover a tile on the home screen to drag or resize it.',
     'layout.reset': 'Reset layout',
     'layout.resetDone': 'Layout reset',
+    'layout.resetConfirmTitle': 'Reset the layout?',
+    'layout.resetConfirmText': 'Every widget goes back to its default place and size, and removed widgets come back.',
+    'widgets.removeConfirmTitle': 'Remove {{name}}?',
+    'widgets.removeConfirmText': 'You can add it back any time from Add widgets.',
+    'widgets.removeConfirmAction': 'Remove',
     'layout.done': 'Done',
     'layout.editingHint': 'Editing your layout — drag a tile by its handle, resize it from the corner.',
     'layout.dragHandle': 'Drag to move',
+    'footer.feedback': 'Feedback',
+    'footer.privacy': 'Privacy',
+    'footer.terms': 'Terms',
+    'footer.copyright': '© {{year}} Buildy',
+    'footer.comingSoon': 'This page is coming soon.',
+    'footer.back': 'Back',
+    'footer.infoTitle': 'About Buildy',
+    'footer.infoBody': 'Buildy helps residents and building management run their building together. More about the app is coming soon.',
+    'feedback.title': 'Send feedback',
+    'feedback.widgetTitle': 'Want to see more widgets?',
+    'feedback.label': 'Share your idea',
+    'feedback.hint': 'Tell us what is missing or what we could do better.',
+    'feedback.send': 'Send',
+    'feedback.thanks': 'Thank you! We read every message.',
+    'widgets.add': 'Add widgets',
+    'widgets.menuTitle': 'Widgets',
+    'docs.chooseFiles': 'Choose files (or drop them here)',
+    'docs.addMore': 'Add more files',
+    'docs.uploadCount': 'Upload {{count}} files',
+    'widgets.dragHint': 'Drag a widget onto your home page, or click it to add.',
+    'widgets.desc.building': 'Address, door code and contact links.',
+    'widgets.desc.apartments': 'Your apartment, or all of them across your buildings.',
+    'widgets.desc.members': 'Neighbours and building management.',
+    'widgets.desc.issues': 'Report and follow problems in the building.',
+    'widgets.desc.docs': 'Shared files and documents.',
+    'widgets.empty': 'Your home page is empty. Add a widget to get started.',
+    'widgets.remove': 'Remove widget',
+    'widgets.allAdded': 'All widgets are already on your home page.',
+    'widgets.wantMore': 'Want to see more widgets?',
+    'widgets.tellUs': 'Tell us',
+    'widgets.emptyHome': 'Nothing here yet.',
+    'widgets.tile.building': 'Building',
+    'widgets.tile.apartments': 'My apartment',
+    'widgets.tile.members': 'Members',
+    'widgets.tile.issues': 'Issues',
+    'widgets.tile.docs': 'Documents',
+    'widgets.tile.payments': 'Payments',
+    'widgets.desc.payments': 'Monthly fees: the building budget and your own part.',
+    'payments.budget': 'Monthly budget',
+    'payments.myPart': 'My part',
+    'payments.collected': '₪{{collected}} of ₪{{goal}} collected',
+    'payments.complete': 'Fully collected',
+    'payments.notOpened': "This month isn't open yet. Opening it creates a charge for every apartment from its monthly fee.",
+    'payments.notOpenedResident': "Building management hasn't opened this month yet.",
+    'payments.openMonth': 'Open this month',
+    'payments.addNew': 'Add {{count}} new apartments',
+    'payments.markAll': 'Mark all as paid',
+    'payments.markPaid': 'Mark paid',
+    'payments.paid': 'Paid',
+    'payments.unpaid': 'Unpaid',
+    'payments.fee': '₪{{amount}}',
+    'payments.noFee': 'No fee set',
+    'payments.editFee': 'Change fee',
+    'payments.feeTitle': 'Fee for apartment {{apartment}}',
+    'payments.feeAmount': 'Monthly fee (₪)',
+    'payments.scopeOnce': 'This month only',
+    'payments.scopePermanent': 'From now on',
+    'payments.save': 'Save',
+    'payments.cancel': 'Cancel',
+    'payments.pay': 'Pay',
+    'payments.demoNote': 'Demo: paying here only marks the month as paid. No real money moves.',
+    'payments.history': 'Previous months',
+    'payments.noHistory': 'No previous months yet.',
+    'payments.noApartments': 'You have no apartments in this building.',
+    'payments.error': 'Something went wrong. Try again.',
+    'payments.confirmTitle': 'Mark as paid?',
+    'payments.confirmOne': 'Apartment {{apartment}} will be marked as paid for this month. This can\'t be undone.',
+    'payments.confirmAll': 'Every unpaid apartment will be marked as paid for this month. This can\'t be undone.',
+    'payments.noResidents': 'No residents',
+    'payments.setupTitle': 'Set up payments',
+    'payments.setupHint': 'Choose how each month opens, the default fee and how apartments usually pay. You can change this later.',
+    'payments.saveSetup': 'Save',
+    'payments.settings': 'Payment settings',
+    'payments.openMode': 'Opening each month',
+    'payments.openManual': 'By hand: I press "Open this month"',
+    'payments.openAuto': 'Automatically, on a day of the month',
+    'payments.openDay': 'Opening day (1–28)',
+    'payments.defaultFee': 'Default monthly fee (₪)',
+    'payments.defaultFeeHint': 'For every apartment without a fee of its own.',
+    'payments.defaultMethod': 'Default payment method',
+    'payments.settingsNextMonth': 'Changes apply from the next month.',
+    'payments.autoOpensOn': 'Opens by itself on day {{day}} of the month.',
+    'payments.method': 'Payment method',
+    'payments.log': 'Payments log',
+    'payments.apartmentLog': 'Payment log',
+    'payments.logTitleApartment': 'Payment log · apartment {{apartment}}',
+    'payments.logEmpty': 'No payments yet.',
+    'payments.filterAll': 'All',
+    'payments.filterMonth': 'Month',
+    'payments.filterApartment': 'Apartment',
+    'payments.filterMethod': 'Method',
+    'payments.colMonth': 'For',
+    'payments.colAmount': 'Amount',
+    'payments.colStatus': 'Status',
+    'payments.colPaidOn': 'Paid on',
+    'payments.colPaidBy': 'Paid by',
+    'payments.colConfirmedBy': 'Confirmed by',
+    'payments.colHow': 'How',
+    'payments.confirmation.single': 'Marked by management',
+    'payments.confirmation.bulk': 'Mark all (management)',
+    'payments.confirmation.self': 'Paid by the resident',
+    'payments.confirmation.automatic': 'Automatic',
+    'payments.payer': 'Pays: {{name}}',
+    'payments.payerYou': 'You pay this apartment.',
+    'payments.payerOther': '{{name}} pays this apartment.',
+    'payments.whoPays': 'Who pays',
+    'payments.whoPaysHint': 'As an owner, you choose who pays the monthly fee.',
+    'payments.wizardTitle': 'Payments',
+    'payments.wizardSubtitle': 'How each month opens, the default fee and how apartments usually pay. You can change this later.',
+    'issues.undo': 'Undo',
+    'issues.undoHint': 'You can take this back and edit it until the timer runs out.',
+    'issues.draftRestored': 'Your previous message is back, so you can edit it and send it again.',
     'members.manage': 'Manage',
     'members.manageTitle': 'Manage {{name}}',
     'members.apartmentsTitle': 'Apartments',
@@ -488,14 +836,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.block': 'Block',
     'members.blockConfirm': 'Block {{name}}?',
     'members.blockHint': "They'll be removed and can't rejoin until unblocked.",
-    'members.removeHint': 'They can rejoin with the building password.',
+    'members.removeHint': 'Building management can add them again.',
     'members.blockedTitle': 'Blocked',
     'members.blockedBy': 'Blocked by {{name}}',
     'members.unblock': 'Unblock',
-    'members.pending': 'Pending: {{details}}',
-    'members.approve': 'Approve',
-    'members.pendingCount': '{{count}} pending',
-    'myUnit.pending': 'Waiting for building management to confirm: {{details}}',
     'myUnit.setByManagement': 'Apartments and payment details are set by building management.',
     'settings.phoneLabel': 'Phone',
     'settings.phoneHint': 'Optional. Only building management and admins can see it.',
@@ -514,17 +858,95 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'picture.notImage': 'Please choose an image file.',
     'picture.pendingUpload': 'New picture ready — press Save to keep it.',
     'picture.pendingRemove': 'Picture will be removed when you press Save.',
-    'setup.title': 'Finish setting up your account',
-    'setup.open': 'Finish setup',
-    'setup.bannerHint': 'tell us your apartment in this building.',
-    'setup.apartmentHint': 'Your apartment number and whether you own or rent it. Building management will confirm.',
-    'setup.optionalHint': 'Optional — you can skip this and add it later in Settings.',
-    'setup.later': 'Later',
-    'setup.back': 'Back',
-    'setup.skip': 'Skip',
-    'setup.finish': 'Finish',
     'userMenu.emailVerified': 'Email verified',
     'userMenu.signOut': 'Sign Out',
+    'common.skip': 'Skip',
+    'themeStep.title': 'Pick your look',
+    'themeStep.subtitle': 'Light, dark, or follow your device. You can change it any time in Settings.',
+    'phoneStep.title': 'Your phone number',
+    'phoneStep.subtitle': 'Optional. Only building management can see it.',
+    'pictureStep.title': 'Add a picture',
+    'pictureStep.subtitle': 'Optional. Without one, we use your Google photo or your initials.',
+    'noBuilding.title': 'Welcome, {{name}}',
+    'noBuilding.explain': "You're not in a building yet. Send your ID to your committee head or management company — once they add you, your building appears here.",
+    'noBuilding.idLabel': 'Your ID',
+    'noBuilding.copy': 'Copy',
+    'noBuilding.copied': 'Copied',
+    'noBuilding.refresh': 'Check again',
+    'noBuilding.aboutTitle': 'What is buildy?',
+    'noBuilding.aboutBody': 'buildy keeps everything about your building in one place: neighbours, documents, contacts and issues.',
+    'noBuilding.createTitle': 'Managing a building?',
+    'noBuilding.createHint': 'Committee heads and management companies can set up their building and add their residents.',
+    'noBuilding.create': 'Create a building',
+    'dashboard.createBuilding': 'Create a building',
+    'settings.userIdHint': 'Share it with your committee head so they can add you to a building.',
+    'wizard.role.title': 'What is your role?',
+    'wizard.role.subtitle': "You'll manage this building and decide who joins it.",
+    'wizard.role.label': 'Your role',
+    'wizard.residents.title': 'Add your residents',
+    'wizard.residents.subtitle': 'Optional. Paste the IDs your residents sent you — you can also do this later from the members list.',
+    'wizard.duplicateError': "A building with this address already exists in this city. If it's yours, please contact support.",
+    'residents.addButton': 'Add residents',
+    'residents.addTitle': 'Add residents',
+    'residents.addHint': "Paste everyone's IDs at once, then set their apartments below. They're added straight away.",
+    'residents.pasteLabel': 'User IDs',
+    'residents.pasteHint': "Paste the whole text you received — we'll pick out the IDs.",
+    'residents.addToList': 'Add to list',
+    'residents.lookingUp': 'Looking up…',
+    'residents.noneFound': 'No user IDs found in that text.',
+    'residents.notFound': '{{count}} ID(s) not found: {{ids}}',
+    'residents.lookupError': "Couldn't look those up. Please try again.",
+    'residents.empty': 'No one on the list yet.',
+    'residents.setForAll': 'Set for everyone',
+    'residents.setForAllHint': 'Fill in only what you want to set — empty fields are left alone.',
+    'residents.applyAll': 'Apply to all',
+    'residents.relation': 'Owner / renter',
+    'residents.toAdd': '{{count}} to add',
+    'residents.removeRow': 'Remove from list',
+    'residents.alreadyMember': 'Already in this building',
+    'residents.blocked': 'Blocked — unblock first',
+    'residents.isMe': "That's you",
+    'residents.needApartments': 'Every person needs an apartment number.',
+    'residents.add': 'Add {{count}}',
+    'residents.addError': "Couldn't add them. Please try again.",
+    'issues.title': 'Issues',
+    'issues.new': 'Report an issue',
+    'issues.empty': 'No issues reported yet.',
+    'issues.emptyFiltered': 'No issues with this status.',
+    'issues.titleLabel': 'What is the problem?',
+    'issues.descriptionLabel': 'Details (optional)',
+    'issues.attach': 'Add pictures or files',
+    'issues.attachHint': 'Up to 10 files, 10 MB each.',
+    'issues.tooMany': 'Up to 10 files.',
+    'issues.post': 'Report',
+    'issues.postError': "Couldn't report the issue. Please try again.",
+    'issues.editTitle': 'Edit issue',
+    'issues.deleteTitle': 'Delete this issue?',
+    'issues.deleteBody': 'It and its files will be removed for everyone in the building.',
+    'issues.actionError': 'Something went wrong. Please try again.',
+    'issues.status.opened': 'Opened',
+    'issues.status.in_process': 'In process',
+    'issues.status.denied': 'Denied',
+    'issues.status.resolved': 'Resolved',
+    'issues.pinged': 'Pinged',
+    'issues.ping': 'Ping',
+    'issues.pingHint': 'Brings this issue back to the top. Once a week.',
+    'issues.pingAvailable': 'You can ping again on {{date}}.',
+    'issues.pingWait': 'You can ping an issue once a week.',
+    'issues.reportedBy': 'Reported by {{name}} on {{date}}',
+    'issues.history': 'History',
+    'issues.noteLabel': 'Note (required)',
+    'issues.noteHint': 'Explain the decision or what happens next. You can also attach pictures or files.',
+    'admin.tabIssues': 'Issues',
+    'issues.action.in_process': 'Accept issue',
+    'issues.action.denied': 'Deny',
+    'issues.action.resolved': 'Mark as resolved',
+    'issues.addUpdate': 'Add an update',
+    'issues.updateLabel': 'Message',
+    'issues.updateHint': 'Add a message, pictures or files — at least one.',
+    'issues.send': 'Send',
+    'issues.closed': 'This issue is closed — nothing can be changed any more.',
+    'issues.updateChip': 'Update',
   },
   he: {
     'common.continue': 'המשך',
@@ -546,29 +968,59 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'home.signInPrompt': 'התחברו כדי לצפות במסמכי הבניין, בכספים ובהודעות',
     'home.signInButton': 'התחברות עם Google',
     'dashboard.welcome': 'שלום, {{name}}',
+    'summary.open': '{{count}} פתוחות',
+    'summary.nothingOpen': 'אין תקלות פתוחות',
+    'summary.seeAll': 'הכל',
+    'summary.ofGoal': 'מתוך ₪{{goal}} · {{month}}',
+    'summary.notOpened': 'החודש עוד לא נפתח',
+    'summary.yourPart': 'החלק שלך · {{month}}',
+    'summary.allPaid': 'הכל שולם',
+    'summary.details': 'פרטים',
+    'summary.people': '{{count}} אנשים',
+    'summary.managedBy': 'בניהול {{name}}',
+    'nav.home': 'בית',
+    'nav.issues': 'תקלות',
+    'nav.money': 'כספים',
+    'nav.docs': 'מסמכים',
+    'nav.people': 'דיירים',
+    'nav.label': 'אזורים',
+    'language.partial': 'תרגום חלקי',
+    'layout.presetsTitle': 'התחילו מפריסה מוכנה',
+    'layout.preset.head': 'ועד הבית',
+    'layout.preset.resident': 'דייר',
+    'layout.preset.essentials': 'רק העיקר',
+    'layout.preset.everything': 'הכול',
+    'layout.presetDesc.head': 'כסף ותקלות קודם',
+    'layout.presetDesc.resident': 'החלק שלך, קוד הכניסה ומה מתוקן',
+    'layout.presetDesc.essentials': 'שני אריחים, בלי עומס',
+    'layout.presetDesc.everything': 'כל האריחים, בפריסה הרגילה',
+    'layout.presetConfirmTitle': 'להשתמש בפריסה „{{name}}”?',
+    'layout.presetConfirmText': 'הסידור הנוכחי במכשיר הזה יוחלף. אפשר עדיין להזיז ולשנות גודל אחר כך.',
+    'layout.presetApply': 'השתמשו בפריסה',
+    'payments.slideToPay': 'החליקו לתשלום ₪{{amount}}',
+    'payments.sending': 'שולח…',
+    'payments.paidThanks': 'שולם, תודה',
+    'door.hold': 'לחצו ממושך כדי להציג',
+    'door.tapToCopy': 'הקישו על הקוד להעתקה',
+    'door.copied': 'הועתק',
+    'greeting.morning': 'בוקר טוב, {{name}}',
+    'greeting.afternoon': 'צהריים טובים, {{name}}',
+    'greeting.evening': 'ערב טוב, {{name}}',
+    'greeting.night': 'לילה טוב, {{name}}',
     'dashboard.quickActions': 'פעולות מהירות',
     'dashboard.reportIssue': 'דיווח על תקלה',
     'dashboard.building': 'הבניין',
-    'dashboard.messages': 'הודעות',
-    'dashboard.noMessages': 'אין הודעות עדיין.',
-    'dashboard.noMessagesOfType': 'אין הודעות מסוג זה.',
-    'dashboard.newMessage': 'הודעה חדשה',
     'dashboard.filterAll': 'הכול',
-    'dashboard.messageTypeLabel': 'סוג',
-    'dashboard.messageTitleLabel': 'כותרת',
-    'dashboard.messageDescriptionLabel': 'פרטים (לא חובה)',
-    'dashboard.postMessage': 'פרסום',
-    'dashboard.postMessageError': 'לא הצלחנו לפרסם את ההודעה. נסו שוב.',
     'dashboard.entryCode': 'קוד כניסה',
     'dashboard.memberCount': '{{count}} דיירים ב-buildy',
     'dashboard.contacts': 'יצירת קשר עם הבניין',
-    'messageType.general': 'כללי',
-    'messageType.urgent': 'דחוף',
-    'messageType.maintenance': 'תחזוקה',
     'contactType.whatsapp': 'קבוצת וואטסאפ',
     'contactType.phone': 'טלפון',
     'contactType.email': 'אימייל',
     'myUnit.title': 'הדירות שלי',
+    'myUnit.titleOne': 'הדירה שלי',
+    'myUnit.center': 'מרכז הדירה',
+    'myUnit.centerSoon': 'כל מה שקשור לדירה הזאת יהיה כאן בקרוב.',
     'myUnit.empty': 'הנהלת הבניין עדיין לא שייכה אליכם דירה.',
     'myUnit.apartment': 'דירה',
     'myUnit.floor': 'קומה',
@@ -578,23 +1030,17 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'myUnit.monthlyPayment': 'דמי ועד חודשיים',
     'relationType.owner': 'בעל/ת דירה',
     'relationType.tenant': 'שוכר/ת',
+    'paymentMethod.card': 'כרטיס אשראי',
     'paymentMethod.cash': 'מזומן',
     'paymentMethod.transfer': 'העברה בנקאית',
-    'paymentMethod.bit': 'ביט',
-    'paymentMethod.paybox': 'פייבוקס',
-    'joinBuilding.title': 'מצאו את הבניין שלכם',
-    'joinBuilding.subtitle': 'בחרו את הבניין שלכם והזינו את סיסמת הגישה.',
-    'joinBuilding.passwordLabel': 'סיסמת הבניין',
-    'joinBuilding.wrongPassword': 'סיסמה שגויה. נסו שוב.',
-    'joinBuilding.genericError': 'לא הצלחנו להצטרף לבניין. נסו שוב.',
-    'joinBuilding.confirm': 'הצטרפתם בהצלחה!',
+    'paymentMethod.bit_paybox': 'ביט / פייבוקס',
     'settings.title': 'הגדרות חשבון',
     'settings.subtitle': 'נהלו את הפרופיל והחשבון שלכם',
     'settings.email': 'אימייל',
     'settings.emailVerified': 'אימות אימייל',
     'settings.verified': 'מאומת',
     'settings.notVerified': 'לא מאומת',
-    'settings.userId': 'מזהה משתמש',
+    'settings.userId': 'המזהה שלכם',
     'settings.backToHome': 'חזרה לדף הבית',
     'settings.nameLabel': 'שם',
     'settings.languageLabel': 'שפה',
@@ -614,10 +1060,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'settings.leaveConfirmInstruction': 'הקלידו "{{phrase}}" כדי לאשר.',
     'settings.leaveConfirmPlaceholder': 'הקלידו {{phrase}}',
     'common.delete': 'מחיקה',
-    'messages.editTitle': 'עריכת הודעה',
-    'messages.deleteTitle': 'למחוק את ההודעה?',
-    'messages.deleteBody': 'היא תוסר עבור כל דיירי הבניין.',
-    'messages.actionError': 'לא הצלחנו לעדכן את ההודעה. נסו שוב.',
     'admin.sectionTitle': 'ניהול',
     'admin.sectionDescription': 'יצירה, עריכה ומחיקה של בניינים וההודעות שלהם.',
     'admin.openPanel': 'פתיחת לוח הניהול',
@@ -626,17 +1068,23 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.stats': '{{members}} דיירים · {{messages}} הודעות · {{docs}} מסמכים',
     'admin.noBuildings': 'אין בניינים עדיין.',
     'admin.editBuilding': 'עריכת בניין',
+    'admin.join': 'הצטרפות לבניין',
+    'admin.joinAs': 'הצטרפות בתור {{role}}',
+    'admin.joined': 'את/ה חבר/ה בבניין הזה',
+    'admin.joinHint': 'הבניין יופיע בבורר הבניינים שלך. הרשאות המנהל שלך לא משתנות.',
+    'admin.openBuilding': 'פתיחת הבניין',
+    'admin.openJoinFirst': 'עדיין אין לך חברות בבניין. הצטרפות עם תפקיד כדי לפתוח אותו באפליקציה:',
+    'admin.tabApartments': 'דירות',
+    'admin.apartmentsEmpty': 'אין עדיין דירות בבניין הזה.',
     'admin.deleteTitle': 'למחוק את {{name}}?',
     'admin.deleteBody': 'פעולה זו מוחקת לצמיתות את הבניין יחד עם שיוך הדיירים, ההודעות והמסמכים שלו.',
     'admin.deleteConfirmInstruction': 'הקלידו את שם הבניין לאישור.',
     'admin.saveError': 'לא הצלחנו לשמור את הבניין. נסו שוב.',
     'admin.duplicateError': 'כבר קיים בניין בכתובת הזו בעיר הזו.',
-    'admin.passwordKeep': 'סיסמה חדשה (השאירו ריק כדי לשמור את הנוכחית)',
     'admin.identityAdminOnly': 'רק מנהל מערכת יכול לשנות שם, עיר וכתובת',
     'admin.fieldName': 'שם',
     'admin.fieldCity': 'עיר',
     'admin.fieldAddress': 'כתובת',
-    'admin.fieldPassword': 'סיסמת הצטרפות',
     'admin.fieldDescription': 'תיאור',
     'wizard.name.title': 'איך נקרא הבניין?',
     'wizard.name.subtitle': 'הדיירים יראו את השם הזה במסך הבית.',
@@ -649,9 +1097,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.address.placeholder': 'למשל: בן יהודה 14',
     'wizard.details.title': 'כמה פרטים',
     'wizard.details.subtitle': 'לא חובה — אפשר להשלים מאוחר יותר.',
-    'wizard.password.title': 'קביעת סיסמת הצטרפות',
-    'wizard.password.subtitle': 'הדיירים יזינו סיסמה זו כדי להצטרף לבניין. שתפו אותה רק איתם.',
-    'wizard.password.placeholder': 'לפחות 4 תווים',
     'wizard.review.title': 'מוכנים ליצור?',
     'wizard.review.subtitle': 'בדקו את הפרטים למטה.',
     'wizard.review.create': 'יצירת בניין',
@@ -725,23 +1170,136 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.backToApp': 'חזרה לאפליקציה',
     'admin.tabOverview': 'סקירה',
     'admin.tabMembers': 'דיירים',
-    'admin.tabMessages': 'הודעות',
     'admin.tabDocuments': 'מסמכים',
     'role.management_company': 'חברת ניהול',
     'members.management': 'הנהלת הבניין',
     'common.formerResident': 'דייר/ת לשעבר',
     'dashboard.editDetails': 'עריכת פרטים',
-    'dashboard.joinAnother': 'הצטרפות לבניין נוסף',
-    'joinBuilding.blocked': 'נחסמתם מהבניין הזה. פנו להנהלת הבניין.',
-    'joinBuilding.tooManyTries': 'יותר מדי סיסמאות שגויות. נסו שוב בעוד 15 דקות.',
     'layout.sectionTitle': 'פריסת מסך הבית',
     'layout.editToggle': 'עריכת פריסת מסך הבית',
     'layout.editToggleHint': 'כשמופעל, רחפו מעל אריח במסך הבית כדי לגרור או לשנות את גודלו.',
     'layout.reset': 'איפוס הפריסה',
     'layout.resetDone': 'הפריסה אופסה',
+    'layout.resetConfirmTitle': 'לאפס את הפריסה?',
+    'layout.resetConfirmText': 'כל הווידג׳טים יחזרו למקום ולגודל ברירת המחדל, ווידג׳טים שהוסרו יחזרו.',
+    'widgets.removeConfirmTitle': 'להסיר את {{name}}?',
+    'widgets.removeConfirmText': 'אפשר להחזיר אותו בכל זמן מ״הוספת ווידג׳טים״.',
+    'widgets.removeConfirmAction': 'הסרה',
     'layout.done': 'סיום',
     'layout.editingHint': 'עריכת הפריסה — גררו אריח בידית, שנו גודל מהפינה.',
     'layout.dragHandle': 'גררו כדי להזיז',
+    'footer.feedback': 'משוב',
+    'footer.privacy': 'פרטיות',
+    'footer.terms': 'תנאים',
+    'footer.copyright': '© {{year}} Buildy',
+    'footer.comingSoon': 'הדף הזה יהיה זמין בקרוב.',
+    'footer.back': 'חזרה',
+    'footer.infoTitle': 'על Buildy',
+    'footer.infoBody': 'Buildy עוזרת לדיירים ולוועד הבית לנהל את הבניין יחד. עוד על האפליקציה — בקרוב.',
+    'feedback.title': 'שליחת משוב',
+    'feedback.widgetTitle': 'רוצים לראות עוד ווידג׳טים?',
+    'feedback.label': 'שתפו את הרעיון שלכם',
+    'feedback.hint': 'ספרו לנו מה חסר או מה אפשר לשפר.',
+    'feedback.send': 'שליחה',
+    'feedback.thanks': 'תודה! אנחנו קוראים כל הודעה.',
+    'widgets.add': 'הוספת ווידג׳טים',
+    'widgets.menuTitle': 'ווידג׳טים',
+    'docs.chooseFiles': 'בחרו קבצים (או גררו לכאן)',
+    'docs.addMore': 'הוספת קבצים',
+    'docs.uploadCount': 'העלאת {{count}} קבצים',
+    'widgets.dragHint': 'גררו ווידג׳ט לדף הבית, או לחצו עליו כדי להוסיף.',
+    'widgets.desc.building': 'כתובת, קוד כניסה וקישורי קשר.',
+    'widgets.desc.apartments': 'הדירה שלכם, או כל הדירות שלכם בכל הבניינים.',
+    'widgets.desc.members': 'שכנים וניהול הבניין.',
+    'widgets.desc.issues': 'דיווח ומעקב אחרי תקלות בבניין.',
+    'widgets.desc.docs': 'קבצים ומסמכים משותפים.',
+    'widgets.empty': 'דף הבית ריק. הוסיפו ווידג׳ט כדי להתחיל.',
+    'widgets.remove': 'הסרת ווידג׳ט',
+    'widgets.allAdded': 'כל הווידג׳טים כבר בדף הבית שלכם.',
+    'widgets.wantMore': 'רוצים לראות עוד ווידג׳טים?',
+    'widgets.tellUs': 'ספרו לנו',
+    'widgets.emptyHome': 'אין כאן כלום עדיין.',
+    'widgets.tile.building': 'הבניין',
+    'widgets.tile.apartments': 'הדירה שלי',
+    'widgets.tile.members': 'חברים',
+    'widgets.tile.issues': 'תקלות',
+    'widgets.tile.docs': 'מסמכים',
+    'widgets.tile.payments': 'תשלומים',
+    'widgets.desc.payments': 'דמי ועד חודשיים: תקציב הבניין והחלק שלך.',
+    'payments.budget': 'התקציב החודשי',
+    'payments.myPart': 'החלק שלי',
+    'payments.collected': 'נגבו ₪{{collected}} מתוך ₪{{goal}}',
+    'payments.complete': 'נגבה במלואו',
+    'payments.notOpened': 'החודש עדיין לא נפתח. פתיחה יוצרת חיוב לכל דירה לפי דמי הוועד החודשיים שלה.',
+    'payments.notOpenedResident': 'הנהלת הבניין עדיין לא פתחה את החודש.',
+    'payments.openMonth': 'פתיחת החודש',
+    'payments.addNew': 'הוספת {{count}} דירות חדשות',
+    'payments.markAll': 'סימון כולם כשולמו',
+    'payments.markPaid': 'סימון כשולם',
+    'payments.paid': 'שולם',
+    'payments.unpaid': 'לא שולם',
+    'payments.fee': '₪{{amount}}',
+    'payments.noFee': 'לא נקבע סכום',
+    'payments.editFee': 'שינוי סכום',
+    'payments.feeTitle': 'סכום לדירה {{apartment}}',
+    'payments.feeAmount': 'דמי ועד חודשיים (₪)',
+    'payments.scopeOnce': 'החודש בלבד',
+    'payments.scopePermanent': 'מעכשיו ולהבא',
+    'payments.save': 'שמירה',
+    'payments.cancel': 'ביטול',
+    'payments.pay': 'תשלום',
+    'payments.demoNote': 'הדגמה: התשלום כאן רק מסמן את החודש כשולם. לא עובר כסף אמיתי.',
+    'payments.history': 'חודשים קודמים',
+    'payments.noHistory': 'עדיין אין חודשים קודמים.',
+    'payments.noApartments': 'אין לך דירות בבניין הזה.',
+    'payments.error': 'משהו השתבש. נסו שוב.',
+    'payments.confirmTitle': 'לסמן כשולם?',
+    'payments.confirmOne': 'דירה {{apartment}} תסומן כשולמה לחודש הזה. אי אפשר לבטל.',
+    'payments.confirmAll': 'כל הדירות שטרם שילמו יסומנו כשולמו לחודש הזה. אי אפשר לבטל.',
+    'payments.noResidents': 'אין דיירים',
+    'payments.setupTitle': 'הגדרת תשלומים',
+    'payments.setupHint': 'בחרו איך כל חודש נפתח, את דמי הוועד ברירת המחדל ואיך הדירות משלמות בדרך כלל. אפשר לשנות אחר כך.',
+    'payments.saveSetup': 'שמירה',
+    'payments.settings': 'הגדרות תשלומים',
+    'payments.openMode': 'פתיחת כל חודש',
+    'payments.openManual': 'ידנית: לוחצים "פתיחת החודש"',
+    'payments.openAuto': 'אוטומטית, ביום קבוע בחודש',
+    'payments.openDay': 'יום הפתיחה (1–28)',
+    'payments.defaultFee': 'דמי ועד חודשיים ברירת מחדל (₪)',
+    'payments.defaultFeeHint': 'לכל דירה שאין לה סכום משלה.',
+    'payments.defaultMethod': 'אמצעי תשלום ברירת מחדל',
+    'payments.settingsNextMonth': 'השינויים חלים מהחודש הבא.',
+    'payments.autoOpensOn': 'נפתח מעצמו ב-{{day}} בחודש.',
+    'payments.method': 'אמצעי תשלום',
+    'payments.log': 'יומן תשלומים',
+    'payments.apartmentLog': 'יומן תשלומים',
+    'payments.logTitleApartment': 'יומן תשלומים · דירה {{apartment}}',
+    'payments.logEmpty': 'עדיין אין תשלומים.',
+    'payments.filterAll': 'הכל',
+    'payments.filterMonth': 'חודש',
+    'payments.filterApartment': 'דירה',
+    'payments.filterMethod': 'אמצעי',
+    'payments.colMonth': 'עבור',
+    'payments.colAmount': 'סכום',
+    'payments.colStatus': 'סטטוס',
+    'payments.colPaidOn': 'שולם ב-',
+    'payments.colPaidBy': 'שולם על ידי',
+    'payments.colConfirmedBy': 'אושר על ידי',
+    'payments.colHow': 'אופן',
+    'payments.confirmation.single': 'סומן על ידי ההנהלה',
+    'payments.confirmation.bulk': 'סימון הכל (הנהלה)',
+    'payments.confirmation.self': 'שולם על ידי הדייר',
+    'payments.confirmation.automatic': 'אוטומטי',
+    'payments.payer': 'משלם: {{name}}',
+    'payments.payerYou': 'את/ה משלם/ת על הדירה הזאת.',
+    'payments.payerOther': '{{name}} משלם/ת על הדירה הזאת.',
+    'payments.whoPays': 'מי משלם',
+    'payments.whoPaysHint': 'כבעלים, את/ה בוחר/ת מי משלם את דמי הוועד.',
+    'payments.wizardTitle': 'תשלומים',
+    'payments.wizardSubtitle': 'איך כל חודש נפתח, דמי הוועד ברירת המחדל ואיך הדירות משלמות בדרך כלל. אפשר לשנות אחר כך.',
+    'issues.undo': 'ביטול',
+    'issues.undoHint': 'אפשר לבטל ולערוך עד שהטיימר מסתיים.',
+    'issues.draftRestored': 'ההודעה הקודמת חזרה, אפשר לערוך ולשלוח שוב.',
     'members.manage': 'ניהול',
     'members.manageTitle': 'ניהול {{name}}',
     'members.apartmentsTitle': 'דירות',
@@ -749,14 +1307,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.block': 'חסימה',
     'members.blockConfirm': 'לחסום את {{name}}?',
     'members.blockHint': 'הם יוסרו ולא יוכלו להצטרף שוב עד לביטול החסימה.',
-    'members.removeHint': 'הם יוכלו להצטרף שוב עם סיסמת הבניין.',
+    'members.removeHint': 'הנהלת הבניין יכולה להוסיף אותם שוב.',
     'members.blockedTitle': 'חסומים',
     'members.blockedBy': 'נחסם/ה על ידי {{name}}',
     'members.unblock': 'ביטול חסימה',
-    'members.pending': 'ממתין: {{details}}',
-    'members.approve': 'אישור',
-    'members.pendingCount': '{{count}} ממתינים',
-    'myUnit.pending': 'ממתין לאישור הנהלת הבניין: {{details}}',
     'myUnit.setByManagement': 'הדירות ופרטי התשלום נקבעים על ידי הנהלת הבניין.',
     'settings.phoneLabel': 'טלפון',
     'settings.phoneHint': 'לא חובה. רק הנהלת הבניין ומנהלי המערכת רואים אותו.',
@@ -775,17 +1329,95 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'picture.notImage': 'נא לבחור קובץ תמונה.',
     'picture.pendingUpload': 'התמונה החדשה מוכנה — לחצו שמירה כדי לשמור אותה.',
     'picture.pendingRemove': 'התמונה תוסר כשתלחצו שמירה.',
-    'setup.title': 'השלמת הגדרת החשבון',
-    'setup.open': 'השלמת ההגדרה',
-    'setup.bannerHint': 'ספרו לנו מה הדירה שלכם בבניין הזה.',
-    'setup.apartmentHint': 'מספר הדירה והאם אתם בעלים או שוכרים. הנהלת הבניין תאשר.',
-    'setup.optionalHint': 'לא חובה — אפשר לדלג ולהוסיף מאוחר יותר בהגדרות.',
-    'setup.later': 'אחר כך',
-    'setup.back': 'חזרה',
-    'setup.skip': 'דילוג',
-    'setup.finish': 'סיום',
     'userMenu.emailVerified': 'אימייל מאומת',
     'userMenu.signOut': 'התנתקות',
+    'common.skip': 'דילוג',
+    'themeStep.title': 'איך תרצו שזה ייראה?',
+    'themeStep.subtitle': 'בהיר, כהה, או לפי המכשיר. אפשר לשנות בכל רגע בהגדרות.',
+    'phoneStep.title': 'מספר הטלפון שלכם',
+    'phoneStep.subtitle': 'לא חובה. רק הנהלת הבניין יכולה לראות אותו.',
+    'pictureStep.title': 'הוסיפו תמונה',
+    'pictureStep.subtitle': 'לא חובה. בלי תמונה נשתמש בתמונת Google שלכם או באותיות הראשונות.',
+    'noBuilding.title': 'ברוכים הבאים, {{name}}',
+    'noBuilding.explain': 'עוד לא צורפתם לבניין. שלחו את המזהה שלכם לוועד הבית או לחברת הניהול — ברגע שיוסיפו אתכם, הבניין יופיע כאן.',
+    'noBuilding.idLabel': 'המזהה שלכם',
+    'noBuilding.copy': 'העתקה',
+    'noBuilding.copied': 'הועתק',
+    'noBuilding.refresh': 'בדיקה מחדש',
+    'noBuilding.aboutTitle': 'מה זה buildy?',
+    'noBuilding.aboutBody': 'buildy מרכז את כל מה שקשור לבניין שלכם במקום אחד: שכנים, מסמכים, אנשי קשר ותקלות.',
+    'noBuilding.createTitle': 'מנהלים בניין?',
+    'noBuilding.createHint': 'ועד בית וחברות ניהול יכולים להקים את הבניין ולהוסיף את הדיירים.',
+    'noBuilding.create': 'יצירת בניין',
+    'dashboard.createBuilding': 'יצירת בניין',
+    'settings.userIdHint': 'שתפו אותו עם ועד הבית כדי שיוסיפו אתכם לבניין.',
+    'wizard.role.title': 'מה התפקיד שלכם?',
+    'wizard.role.subtitle': 'תנהלו את הבניין הזה ותחליטו מי מצטרף אליו.',
+    'wizard.role.label': 'התפקיד שלכם',
+    'wizard.residents.title': 'הוסיפו את הדיירים',
+    'wizard.residents.subtitle': 'לא חובה. הדביקו את המזהים ששלחו לכם הדיירים — אפשר גם מאוחר יותר מרשימת החברים.',
+    'wizard.duplicateError': 'כבר קיים בניין בכתובת הזו בעיר. אם הוא שלכם, פנו לתמיכה.',
+    'residents.addButton': 'הוספת דיירים',
+    'residents.addTitle': 'הוספת דיירים',
+    'residents.addHint': 'הדביקו את כל המזהים בבת אחת והגדירו את הדירות למטה. הם יתווספו מיד.',
+    'residents.pasteLabel': 'מזהי משתמשים',
+    'residents.pasteHint': 'הדביקו את כל הטקסט שקיבלתם — אנחנו נחלץ ממנו את המזהים.',
+    'residents.addToList': 'הוספה לרשימה',
+    'residents.lookingUp': 'מחפשים…',
+    'residents.noneFound': 'לא נמצאו מזהים בטקסט.',
+    'residents.notFound': '{{count}} מזהים לא נמצאו: {{ids}}',
+    'residents.lookupError': 'לא הצלחנו לחפש. נסו שוב.',
+    'residents.empty': 'עדיין אין אף אחד ברשימה.',
+    'residents.setForAll': 'הגדרה לכולם',
+    'residents.setForAllHint': 'מלאו רק מה שרוצים להגדיר — שדות ריקים לא ישתנו.',
+    'residents.applyAll': 'החלה על כולם',
+    'residents.relation': 'בעלים / שוכר',
+    'residents.toAdd': '{{count}} להוספה',
+    'residents.removeRow': 'הסרה מהרשימה',
+    'residents.alreadyMember': 'כבר בבניין',
+    'residents.blocked': 'חסום — בטלו חסימה קודם',
+    'residents.isMe': 'זה אתם',
+    'residents.needApartments': 'לכל אחד נדרש מספר דירה.',
+    'residents.add': 'הוספת {{count}}',
+    'residents.addError': 'לא הצלחנו להוסיף. נסו שוב.',
+    'issues.title': 'תקלות',
+    'issues.new': 'דיווח על תקלה',
+    'issues.empty': 'עדיין לא דווחו תקלות.',
+    'issues.emptyFiltered': 'אין תקלות בסטטוס הזה.',
+    'issues.titleLabel': 'מה הבעיה?',
+    'issues.descriptionLabel': 'פרטים (לא חובה)',
+    'issues.attach': 'הוספת תמונות או קבצים',
+    'issues.attachHint': 'עד 10 קבצים, 10MB כל אחד.',
+    'issues.tooMany': 'עד 10 קבצים.',
+    'issues.post': 'דיווח',
+    'issues.postError': 'לא הצלחנו לדווח. נסו שוב.',
+    'issues.editTitle': 'עריכת תקלה',
+    'issues.deleteTitle': 'למחוק את התקלה?',
+    'issues.deleteBody': 'היא והקבצים שלה יוסרו עבור כל דיירי הבניין.',
+    'issues.actionError': 'משהו השתבש. נסו שוב.',
+    'issues.status.opened': 'נפתחה',
+    'issues.status.in_process': 'בטיפול',
+    'issues.status.denied': 'נדחתה',
+    'issues.status.resolved': 'נפתרה',
+    'issues.pinged': 'הוזכרה',
+    'issues.ping': 'תזכורת',
+    'issues.pingHint': 'מחזירה את התקלה לראש הרשימה. פעם בשבוע.',
+    'issues.pingAvailable': 'אפשר לשלוח תזכורת שוב ב-{{date}}.',
+    'issues.pingWait': 'אפשר לשלוח תזכורת פעם בשבוע.',
+    'issues.reportedBy': 'דווחה על ידי {{name}} ב-{{date}}',
+    'issues.history': 'היסטוריה',
+    'issues.noteLabel': 'הערה (חובה)',
+    'issues.noteHint': 'הסבירו את ההחלטה או מה הצעד הבא. אפשר גם לצרף תמונות או קבצים.',
+    'admin.tabIssues': 'תקלות',
+    'issues.action.in_process': 'קבלת התקלה לטיפול',
+    'issues.action.denied': 'דחיית התקלה',
+    'issues.action.resolved': 'סימון כנפתרה',
+    'issues.addUpdate': 'הוספת עדכון',
+    'issues.updateLabel': 'הודעה',
+    'issues.updateHint': 'הוסיפו הודעה, תמונות או קבצים — לפחות אחד.',
+    'issues.send': 'שליחה',
+    'issues.closed': 'התקלה סגורה — אי אפשר לשנות בה יותר דבר.',
+    'issues.updateChip': 'עדכון',
   },
   ar: {
     'common.continue': 'متابعة',
@@ -807,25 +1439,30 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'home.signInPrompt': 'سجّل الدخول لعرض مستندات المبنى والشؤون المالية والإشعارات',
     'home.signInButton': 'تسجيل الدخول عبر Google',
     'dashboard.welcome': 'مرحبًا بعودتك، {{name}}',
+    'nav.home': 'الرئيسية',
+    'nav.issues': 'الأعطال',
+    'nav.money': 'المال',
+    'nav.docs': 'المستندات',
+    'nav.people': 'السكان',
+    'nav.label': 'الأقسام',
+    'language.partial': 'ترجمة جزئية',
+    'payments.slideToPay': 'اسحب للدفع ₪{{amount}}',
+    'payments.sending': 'جارٍ الإرسال…',
+    'payments.paidThanks': 'تم الدفع، شكرًا',
+    'door.hold': 'اضغط مطولاً للعرض',
+    'door.tapToCopy': 'اضغط على الرمز للنسخ',
+    'door.copied': 'تم النسخ',
+    'greeting.morning': 'صباح الخير، {{name}}',
+    'greeting.afternoon': 'نهارك سعيد، {{name}}',
+    'greeting.evening': 'مساء الخير، {{name}}',
+    'greeting.night': 'تصبح على خير، {{name}}',
     'dashboard.quickActions': 'إجراءات سريعة',
     'dashboard.reportIssue': 'الإبلاغ عن مشكلة',
     'dashboard.building': 'المبنى',
-    'dashboard.messages': 'الرسائل',
-    'dashboard.noMessages': 'لا توجد رسائل بعد.',
-    'dashboard.noMessagesOfType': 'لا توجد رسائل من هذا النوع.',
-    'dashboard.newMessage': 'رسالة جديدة',
     'dashboard.filterAll': 'الكل',
-    'dashboard.messageTypeLabel': 'النوع',
-    'dashboard.messageTitleLabel': 'العنوان',
-    'dashboard.messageDescriptionLabel': 'التفاصيل (اختياري)',
-    'dashboard.postMessage': 'نشر',
-    'dashboard.postMessageError': 'تعذّر نشر رسالتك. يرجى المحاولة مرة أخرى.',
     'dashboard.entryCode': 'رمز الباب',
     'dashboard.memberCount': '{{count}} من السكان على buildy',
     'dashboard.contacts': 'التواصل مع المبنى',
-    'messageType.general': 'عام',
-    'messageType.urgent': 'عاجل',
-    'messageType.maintenance': 'صيانة',
     'contactType.whatsapp': 'مجموعة واتساب',
     'contactType.phone': 'هاتف',
     'contactType.email': 'البريد الإلكتروني',
@@ -839,23 +1476,16 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'myUnit.monthlyPayment': 'الرسوم الشهرية',
     'relationType.owner': 'مالك',
     'relationType.tenant': 'مستأجر',
+    'paymentMethod.card': 'بطاقة ائتمان',
     'paymentMethod.cash': 'نقدًا',
     'paymentMethod.transfer': 'تحويل بنكي',
-    'paymentMethod.bit': 'Bit',
-    'paymentMethod.paybox': 'PayBox',
-    'joinBuilding.title': 'ابحث عن مبناك',
-    'joinBuilding.subtitle': 'اختر مبناك وأدخل كلمة مرور الوصول الخاصة به.',
-    'joinBuilding.passwordLabel': 'كلمة مرور المبنى',
-    'joinBuilding.wrongPassword': 'كلمة مرور غير صحيحة. حاول مرة أخرى.',
-    'joinBuilding.genericError': 'تعذّر الانضمام إلى هذا المبنى. حاول مرة أخرى.',
-    'joinBuilding.confirm': 'لقد انضممت بنجاح!',
+    'paymentMethod.bit_paybox': 'Bit / PayBox',
     'settings.title': 'إعدادات الحساب',
     'settings.subtitle': 'إدارة ملفك الشخصي وحسابك',
     'settings.email': 'البريد الإلكتروني',
     'settings.emailVerified': 'تم التحقق من البريد الإلكتروني',
     'settings.verified': 'تم التحقق',
     'settings.notVerified': 'غير موثق',
-    'settings.userId': 'معرّف المستخدم',
     'settings.backToHome': 'العودة إلى الصفحة الرئيسية',
     'settings.nameLabel': 'الاسم',
     'settings.languageLabel': 'اللغة',
@@ -875,10 +1505,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'settings.leaveConfirmInstruction': 'اكتب "{{phrase}}" للتأكيد.',
     'settings.leaveConfirmPlaceholder': 'اكتب {{phrase}}',
     'common.delete': 'حذف',
-    'messages.editTitle': 'تعديل الرسالة',
-    'messages.deleteTitle': 'حذف هذه الرسالة؟',
-    'messages.deleteBody': 'ستُزال لجميع سكان المبنى.',
-    'messages.actionError': 'تعذّر تحديث الرسالة. يرجى المحاولة مرة أخرى.',
     'admin.sectionTitle': 'الإدارة',
     'admin.sectionDescription': 'إنشاء المباني ورسائلها وتعديلها وحذفها.',
     'admin.openPanel': 'فتح لوحة الإدارة',
@@ -892,12 +1518,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.deleteConfirmInstruction': 'اكتب اسم المبنى للتأكيد.',
     'admin.saveError': 'تعذّر حفظ المبنى. يرجى المحاولة مرة أخرى.',
     'admin.duplicateError': 'يوجد مبنى بهذا العنوان في هذه المدينة بالفعل.',
-    'admin.passwordKeep': 'كلمة مرور جديدة (اتركها فارغة للإبقاء على الحالية)',
     'admin.identityAdminOnly': 'يمكن للمسؤول فقط تغيير الاسم والمدينة والعنوان',
     'admin.fieldName': 'الاسم',
     'admin.fieldCity': 'المدينة',
     'admin.fieldAddress': 'العنوان',
-    'admin.fieldPassword': 'كلمة مرور الانضمام',
     'admin.fieldDescription': 'الوصف',
     'wizard.name.title': 'ما اسم المبنى؟',
     'wizard.name.subtitle': 'سيرى السكان هذا الاسم في شاشتهم الرئيسية.',
@@ -910,9 +1534,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.address.placeholder': 'مثال: بن يهودا 14',
     'wizard.details.title': 'بعض التفاصيل',
     'wizard.details.subtitle': 'اختياري — يمكنك إكمالها لاحقًا.',
-    'wizard.password.title': 'تعيين كلمة مرور الانضمام',
-    'wizard.password.subtitle': 'يُدخل السكان كلمة المرور هذه للانضمام إلى المبنى. شاركها معهم فقط.',
-    'wizard.password.placeholder': '4 أحرف على الأقل',
     'wizard.review.title': 'جاهز للإنشاء؟',
     'wizard.review.subtitle': 'تحقق من التفاصيل أدناه.',
     'wizard.review.create': 'إنشاء المبنى',
@@ -986,15 +1607,11 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.backToApp': 'العودة إلى التطبيق',
     'admin.tabOverview': 'نظرة عامة',
     'admin.tabMembers': 'السكان',
-    'admin.tabMessages': 'الرسائل',
     'admin.tabDocuments': 'المستندات',
     'role.management_company': 'شركة إدارة',
     'members.management': 'إدارة المبنى',
     'common.formerResident': 'ساكن سابق',
     'dashboard.editDetails': 'تعديل التفاصيل',
-    'dashboard.joinAnother': 'الانضمام إلى مبنى آخر',
-    'joinBuilding.blocked': 'تم حظرك من هذا المبنى. تواصل مع إدارة المبنى.',
-    'joinBuilding.tooManyTries': 'محاولات خاطئة كثيرة. حاول مرة أخرى بعد 15 دقيقة.',
     'layout.sectionTitle': 'تخطيط الشاشة الرئيسية',
     'layout.editToggle': 'تعديل تخطيط الشاشة الرئيسية',
     'layout.editToggleHint': 'عند التفعيل، مرّر فوق أي مربع في الشاشة الرئيسية لسحبه أو تغيير حجمه.',
@@ -1010,14 +1627,9 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.block': 'حظر',
     'members.blockConfirm': 'حظر {{name}}؟',
     'members.blockHint': 'ستتم إزالته ولن يتمكن من الانضمام مجددًا حتى يُلغى الحظر.',
-    'members.removeHint': 'يمكنه الانضمام مجددًا بكلمة مرور المبنى.',
     'members.blockedTitle': 'المحظورون',
     'members.blockedBy': 'حظره {{name}}',
     'members.unblock': 'إلغاء الحظر',
-    'members.pending': 'قيد الانتظار: {{details}}',
-    'members.approve': 'موافقة',
-    'members.pendingCount': '{{count}} قيد الانتظار',
-    'myUnit.pending': 'بانتظار تأكيد إدارة المبنى: {{details}}',
     'myUnit.setByManagement': 'تحدد إدارة المبنى الشقق وتفاصيل الدفع.',
     'settings.phoneLabel': 'الهاتف',
     'settings.phoneHint': 'اختياري. لا يراه إلا إدارة المبنى والمسؤولون.',
@@ -1036,15 +1648,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'picture.notImage': 'يرجى اختيار ملف صورة.',
     'picture.pendingUpload': 'الصورة الجديدة جاهزة — اضغط حفظ للاحتفاظ بها.',
     'picture.pendingRemove': 'ستُزال الصورة عند الضغط على حفظ.',
-    'setup.title': 'أكمل إعداد حسابك',
-    'setup.open': 'إكمال الإعداد',
-    'setup.bannerHint': 'أخبرنا بشقتك في هذا المبنى.',
-    'setup.apartmentHint': 'رقم شقتك وما إذا كنت مالكًا أو مستأجرًا. ستؤكد إدارة المبنى ذلك.',
-    'setup.optionalHint': 'اختياري — يمكنك التخطي وإضافته لاحقًا من الإعدادات.',
-    'setup.later': 'لاحقًا',
-    'setup.back': 'رجوع',
-    'setup.skip': 'تخطٍّ',
-    'setup.finish': 'إنهاء',
     'userMenu.emailVerified': 'البريد الإلكتروني موثّق',
     'userMenu.signOut': 'تسجيل الخروج',
   },
@@ -1068,25 +1671,30 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'home.signInPrompt': 'Войдите, чтобы видеть документы дома, финансы и объявления',
     'home.signInButton': 'Войти через Google',
     'dashboard.welcome': 'С возвращением, {{name}}',
+    'nav.home': 'Главная',
+    'nav.issues': 'Проблемы',
+    'nav.money': 'Деньги',
+    'nav.docs': 'Документы',
+    'nav.people': 'Жильцы',
+    'nav.label': 'Разделы',
+    'language.partial': 'частичный перевод',
+    'payments.slideToPay': 'Сдвиньте, чтобы оплатить ₪{{amount}}',
+    'payments.sending': 'Отправка…',
+    'payments.paidThanks': 'Оплачено, спасибо',
+    'door.hold': 'Удерживайте, чтобы показать',
+    'door.tapToCopy': 'Нажмите на код, чтобы скопировать',
+    'door.copied': 'Скопировано',
+    'greeting.morning': 'Доброе утро, {{name}}',
+    'greeting.afternoon': 'Добрый день, {{name}}',
+    'greeting.evening': 'Добрый вечер, {{name}}',
+    'greeting.night': 'Доброй ночи, {{name}}',
     'dashboard.quickActions': 'Быстрые действия',
     'dashboard.reportIssue': 'Сообщить о проблеме',
     'dashboard.building': 'Дом',
-    'dashboard.messages': 'Сообщения',
-    'dashboard.noMessages': 'Сообщений пока нет.',
-    'dashboard.noMessagesOfType': 'Нет сообщений этого типа.',
-    'dashboard.newMessage': 'Новое сообщение',
     'dashboard.filterAll': 'Все',
-    'dashboard.messageTypeLabel': 'Тип',
-    'dashboard.messageTitleLabel': 'Заголовок',
-    'dashboard.messageDescriptionLabel': 'Подробности (необязательно)',
-    'dashboard.postMessage': 'Опубликовать',
-    'dashboard.postMessageError': 'Не удалось опубликовать сообщение. Попробуйте ещё раз.',
     'dashboard.entryCode': 'Код двери',
     'dashboard.memberCount': 'Жильцов в buildy: {{count}}',
     'dashboard.contacts': 'Связь с домом',
-    'messageType.general': 'Общее',
-    'messageType.urgent': 'Срочно',
-    'messageType.maintenance': 'Обслуживание',
     'contactType.whatsapp': 'Группа WhatsApp',
     'contactType.phone': 'Телефон',
     'contactType.email': 'Эл. почта',
@@ -1100,23 +1708,16 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'myUnit.monthlyPayment': 'Ежемесячный взнос',
     'relationType.owner': 'Владелец',
     'relationType.tenant': 'Арендатор',
+    'paymentMethod.card': 'Банковская карта',
     'paymentMethod.cash': 'Наличные',
     'paymentMethod.transfer': 'Банковский перевод',
-    'paymentMethod.bit': 'Bit',
-    'paymentMethod.paybox': 'PayBox',
-    'joinBuilding.title': 'Найдите свой дом',
-    'joinBuilding.subtitle': 'Выберите свой дом и введите пароль доступа.',
-    'joinBuilding.passwordLabel': 'Пароль дома',
-    'joinBuilding.wrongPassword': 'Неверный пароль. Попробуйте снова.',
-    'joinBuilding.genericError': 'Не удалось присоединиться к этому дому. Попробуйте снова.',
-    'joinBuilding.confirm': 'Вы присоединились!',
+    'paymentMethod.bit_paybox': 'Bit / PayBox',
     'settings.title': 'Настройки аккаунта',
     'settings.subtitle': 'Управляйте профилем и аккаунтом',
     'settings.email': 'Email',
     'settings.emailVerified': 'Email подтверждён',
     'settings.verified': 'Подтверждено',
     'settings.notVerified': 'Не подтверждено',
-    'settings.userId': 'ID пользователя',
     'settings.backToHome': 'Назад на главную',
     'settings.nameLabel': 'Имя',
     'settings.languageLabel': 'Язык',
@@ -1138,10 +1739,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'settings.leaveConfirmInstruction': 'Введите «{{phrase}}», чтобы подтвердить.',
     'settings.leaveConfirmPlaceholder': 'Введите {{phrase}}',
     'common.delete': 'Удалить',
-    'messages.editTitle': 'Редактировать сообщение',
-    'messages.deleteTitle': 'Удалить это сообщение?',
-    'messages.deleteBody': 'Оно исчезнет для всех жильцов дома.',
-    'messages.actionError': 'Не удалось обновить сообщение. Попробуйте ещё раз.',
     'admin.sectionTitle': 'Администрирование',
     'admin.sectionDescription': 'Создание, редактирование и удаление домов и их сообщений.',
     'admin.openPanel': 'Открыть панель администратора',
@@ -1155,12 +1752,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.deleteConfirmInstruction': 'Введите название дома для подтверждения.',
     'admin.saveError': 'Не удалось сохранить дом. Попробуйте ещё раз.',
     'admin.duplicateError': 'Дом с таким адресом в этом городе уже существует.',
-    'admin.passwordKeep': 'Новый пароль (оставьте пустым, чтобы сохранить текущий)',
     'admin.identityAdminOnly': 'Название, город и адрес может изменить только администратор',
     'admin.fieldName': 'Название',
     'admin.fieldCity': 'Город',
     'admin.fieldAddress': 'Адрес',
-    'admin.fieldPassword': 'Пароль для входа',
     'admin.fieldDescription': 'Описание',
     'wizard.name.title': 'Как называется дом?',
     'wizard.name.subtitle': 'Жильцы увидят это название на главном экране.',
@@ -1173,9 +1768,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.address.placeholder': 'Например: Бен Иегуда 14',
     'wizard.details.title': 'Немного подробностей',
     'wizard.details.subtitle': 'Необязательно — можно заполнить позже.',
-    'wizard.password.title': 'Задайте пароль для входа',
-    'wizard.password.subtitle': 'Жильцы вводят этот пароль, чтобы присоединиться к дому. Сообщайте его только им.',
-    'wizard.password.placeholder': 'Не менее 4 символов',
     'wizard.review.title': 'Готовы создать?',
     'wizard.review.subtitle': 'Проверьте данные ниже.',
     'wizard.review.create': 'Создать дом',
@@ -1249,15 +1841,11 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.backToApp': 'Назад в приложение',
     'admin.tabOverview': 'Обзор',
     'admin.tabMembers': 'Жильцы',
-    'admin.tabMessages': 'Сообщения',
     'admin.tabDocuments': 'Документы',
     'role.management_company': 'Управляющая компания',
     'members.management': 'Управление домом',
     'common.formerResident': 'Бывший жилец',
     'dashboard.editDetails': 'Изменить данные',
-    'dashboard.joinAnother': 'Присоединиться к другому дому',
-    'joinBuilding.blocked': 'Вас заблокировали в этом доме. Обратитесь к управлению дома.',
-    'joinBuilding.tooManyTries': 'Слишком много неверных паролей. Попробуйте через 15 минут.',
     'layout.sectionTitle': 'Раскладка главного экрана',
     'layout.editToggle': 'Редактировать раскладку',
     'layout.editToggleHint': 'Если включено, наведите на плитку на главном экране, чтобы перетащить или изменить размер.',
@@ -1273,14 +1861,9 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.block': 'Заблокировать',
     'members.blockConfirm': 'Заблокировать {{name}}?',
     'members.blockHint': 'Жилец будет удалён и не сможет вернуться, пока его не разблокируют.',
-    'members.removeHint': 'Жилец сможет вернуться с паролем дома.',
     'members.blockedTitle': 'Заблокированные',
     'members.blockedBy': 'Заблокировал(а): {{name}}',
     'members.unblock': 'Разблокировать',
-    'members.pending': 'Ожидает: {{details}}',
-    'members.approve': 'Одобрить',
-    'members.pendingCount': 'Ожидают: {{count}}',
-    'myUnit.pending': 'Ожидает подтверждения управления дома: {{details}}',
     'myUnit.setByManagement': 'Квартиры и данные об оплате задаёт управление дома.',
     'settings.phoneLabel': 'Телефон',
     'settings.phoneHint': 'Необязательно. Видят только управление дома и администраторы.',
@@ -1299,15 +1882,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'picture.notImage': 'Выберите файл изображения.',
     'picture.pendingUpload': 'Новое фото готово — нажмите «Сохранить».',
     'picture.pendingRemove': 'Фото будет удалено после нажатия «Сохранить».',
-    'setup.title': 'Завершите настройку аккаунта',
-    'setup.open': 'Завершить настройку',
-    'setup.bannerHint': 'укажите вашу квартиру в этом доме.',
-    'setup.apartmentHint': 'Номер квартиры и владеете вы ею или снимаете. Управление дома подтвердит.',
-    'setup.optionalHint': 'Необязательно — можно пропустить и добавить позже в настройках.',
-    'setup.later': 'Позже',
-    'setup.back': 'Назад',
-    'setup.skip': 'Пропустить',
-    'setup.finish': 'Готово',
     'userMenu.emailVerified': 'Email подтверждён',
     'userMenu.signOut': 'Выйти',
   },
@@ -1332,25 +1906,30 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
       "Connectez-vous pour consulter les documents, finances et annonces de l'immeuble",
     'home.signInButton': 'Se connecter avec Google',
     'dashboard.welcome': 'Bon retour, {{name}}',
+    'nav.home': 'Accueil',
+    'nav.issues': 'Problèmes',
+    'nav.money': 'Argent',
+    'nav.docs': 'Documents',
+    'nav.people': 'Résidents',
+    'nav.label': 'Sections',
+    'language.partial': 'traduction partielle',
+    'payments.slideToPay': 'Glissez pour payer ₪{{amount}}',
+    'payments.sending': 'Envoi…',
+    'payments.paidThanks': 'Payé, merci',
+    'door.hold': 'Maintenez pour afficher',
+    'door.tapToCopy': 'Touchez le code pour le copier',
+    'door.copied': 'Copié',
+    'greeting.morning': 'Bonjour, {{name}}',
+    'greeting.afternoon': 'Bon après-midi, {{name}}',
+    'greeting.evening': 'Bonsoir, {{name}}',
+    'greeting.night': 'Bonne nuit, {{name}}',
     'dashboard.quickActions': 'Actions rapides',
     'dashboard.reportIssue': 'Signaler un problème',
     'dashboard.building': 'Immeuble',
-    'dashboard.messages': 'Messages',
-    'dashboard.noMessages': "Aucun message pour l'instant.",
-    'dashboard.noMessagesOfType': 'Aucun message de ce type.',
-    'dashboard.newMessage': 'Nouveau message',
     'dashboard.filterAll': 'Tous',
-    'dashboard.messageTypeLabel': 'Type',
-    'dashboard.messageTitleLabel': 'Titre',
-    'dashboard.messageDescriptionLabel': 'Détails (facultatif)',
-    'dashboard.postMessage': 'Publier',
-    'dashboard.postMessageError': 'Impossible de publier votre message. Veuillez réessayer.',
     'dashboard.entryCode': "Code d'entrée",
     'dashboard.memberCount': '{{count}} résidents sur buildy',
     'dashboard.contacts': "Contacter l'immeuble",
-    'messageType.general': 'Général',
-    'messageType.urgent': 'Urgent',
-    'messageType.maintenance': 'Maintenance',
     'contactType.whatsapp': 'Groupe WhatsApp',
     'contactType.phone': 'Téléphone',
     'contactType.email': 'E-mail',
@@ -1364,23 +1943,16 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'myUnit.monthlyPayment': 'Charges mensuelles',
     'relationType.owner': 'Propriétaire',
     'relationType.tenant': 'Locataire',
+    'paymentMethod.card': 'Carte bancaire',
     'paymentMethod.cash': 'Espèces',
     'paymentMethod.transfer': 'Virement bancaire',
-    'paymentMethod.bit': 'Bit',
-    'paymentMethod.paybox': 'PayBox',
-    'joinBuilding.title': 'Trouvez votre immeuble',
-    'joinBuilding.subtitle': "Sélectionnez votre immeuble et saisissez son mot de passe d'accès.",
-    'joinBuilding.passwordLabel': "Mot de passe de l'immeuble",
-    'joinBuilding.wrongPassword': 'Mot de passe incorrect. Veuillez réessayer.',
-    'joinBuilding.genericError': 'Impossible de rejoindre cet immeuble. Veuillez réessayer.',
-    'joinBuilding.confirm': 'Vous y êtes !',
+    'paymentMethod.bit_paybox': 'Bit / PayBox',
     'settings.title': 'Paramètres du compte',
     'settings.subtitle': 'Gérez votre profil et votre compte',
     'settings.email': 'E-mail',
     'settings.emailVerified': 'E-mail vérifié',
     'settings.verified': 'Vérifié',
     'settings.notVerified': 'Non vérifié',
-    'settings.userId': 'ID utilisateur',
     'settings.backToHome': "Retour à l'accueil",
     'settings.nameLabel': 'Nom',
     'settings.languageLabel': 'Langue',
@@ -1402,10 +1974,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'settings.leaveConfirmInstruction': 'Tapez « {{phrase}} » pour confirmer.',
     'settings.leaveConfirmPlaceholder': 'Tapez {{phrase}}',
     'common.delete': 'Supprimer',
-    'messages.editTitle': 'Modifier le message',
-    'messages.deleteTitle': 'Supprimer ce message ?',
-    'messages.deleteBody': "Il sera retiré pour tous les résidents de l'immeuble.",
-    'messages.actionError': 'Impossible de mettre à jour le message. Veuillez réessayer.',
     'admin.sectionTitle': 'Administration',
     'admin.sectionDescription': 'Créer, modifier et supprimer des immeubles et leurs messages.',
     'admin.openPanel': "Ouvrir le panneau d'administration",
@@ -1419,12 +1987,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.deleteConfirmInstruction': "Saisissez le nom de l'immeuble pour confirmer.",
     'admin.saveError': "Impossible d'enregistrer l'immeuble. Veuillez réessayer.",
     'admin.duplicateError': 'Un immeuble avec cette adresse existe déjà dans cette ville.',
-    'admin.passwordKeep': 'Nouveau mot de passe (laisser vide pour conserver l’actuel)',
     'admin.identityAdminOnly': 'Seul un administrateur peut modifier le nom, la ville et l’adresse',
     'admin.fieldName': 'Nom',
     'admin.fieldCity': 'Ville',
     'admin.fieldAddress': 'Adresse',
-    'admin.fieldPassword': "Mot de passe d'accès",
     'admin.fieldDescription': 'Description',
     'wizard.name.title': "Comment s'appelle l'immeuble ?",
     'wizard.name.subtitle': "Les résidents verront ce nom sur leur écran d'accueil.",
@@ -1437,9 +2003,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.address.placeholder': 'ex. 14 rue Ben Yehuda',
     'wizard.details.title': 'Quelques détails',
     'wizard.details.subtitle': 'Facultatif — vous pourrez compléter plus tard.',
-    'wizard.password.title': "Définir un mot de passe d'accès",
-    'wizard.password.subtitle': "Les résidents saisissent ce mot de passe pour rejoindre l'immeuble. Ne le partagez qu'avec eux.",
-    'wizard.password.placeholder': 'Au moins 4 caractères',
     'wizard.review.title': 'Prêt à créer ?',
     'wizard.review.subtitle': 'Vérifiez les informations ci-dessous.',
     'wizard.review.create': "Créer l'immeuble",
@@ -1513,15 +2076,11 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.backToApp': "Retour à l'application",
     'admin.tabOverview': 'Aperçu',
     'admin.tabMembers': 'Résidents',
-    'admin.tabMessages': 'Messages',
     'admin.tabDocuments': 'Documents',
     'role.management_company': 'Société de gestion',
     'members.management': "Gestion de l'immeuble",
     'common.formerResident': 'Ancien résident',
     'dashboard.editDetails': 'Modifier les détails',
-    'dashboard.joinAnother': 'Rejoindre un autre immeuble',
-    'joinBuilding.blocked': "Vous avez été bloqué dans cet immeuble. Contactez la gestion de l'immeuble.",
-    'joinBuilding.tooManyTries': 'Trop de mots de passe incorrects. Réessayez dans 15 minutes.',
     'layout.sectionTitle': "Disposition de l'accueil",
     'layout.editToggle': "Modifier la disposition de l'accueil",
     'layout.editToggleHint': "Une fois activé, survolez une tuile de l'accueil pour la déplacer ou la redimensionner.",
@@ -1537,14 +2096,9 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.block': 'Bloquer',
     'members.blockConfirm': 'Bloquer {{name}} ?',
     'members.blockHint': "Cette personne sera retirée et ne pourra pas revenir avant d'être débloquée.",
-    'members.removeHint': "Cette personne pourra revenir avec le mot de passe de l'immeuble.",
     'members.blockedTitle': 'Bloqués',
     'members.blockedBy': 'Bloqué par {{name}}',
     'members.unblock': 'Débloquer',
-    'members.pending': 'En attente : {{details}}',
-    'members.approve': 'Approuver',
-    'members.pendingCount': '{{count}} en attente',
-    'myUnit.pending': "En attente de confirmation par la gestion de l'immeuble : {{details}}",
     'myUnit.setByManagement': "Les appartements et les détails de paiement sont définis par la gestion de l'immeuble.",
     'settings.phoneLabel': 'Téléphone',
     'settings.phoneHint': "Facultatif. Seuls la gestion de l'immeuble et les administrateurs le voient.",
@@ -1563,15 +2117,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'picture.notImage': 'Veuillez choisir un fichier image.',
     'picture.pendingUpload': 'Nouvelle photo prête — appuyez sur Enregistrer pour la garder.',
     'picture.pendingRemove': 'La photo sera supprimée quand vous appuierez sur Enregistrer.',
-    'setup.title': 'Terminez la configuration de votre compte',
-    'setup.open': 'Terminer la configuration',
-    'setup.bannerHint': 'indiquez votre appartement dans cet immeuble.',
-    'setup.apartmentHint': "Votre numéro d'appartement et si vous êtes propriétaire ou locataire. La gestion de l'immeuble confirmera.",
-    'setup.optionalHint': 'Facultatif — vous pouvez passer et l’ajouter plus tard dans les paramètres.',
-    'setup.later': 'Plus tard',
-    'setup.back': 'Retour',
-    'setup.skip': 'Passer',
-    'setup.finish': 'Terminer',
     'userMenu.emailVerified': 'E-mail vérifié',
     'userMenu.signOut': 'Se déconnecter',
   },
@@ -1595,25 +2140,30 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'home.signInPrompt': 'Inicia sesión para ver documentos, finanzas y avisos del edificio',
     'home.signInButton': 'Iniciar sesión con Google',
     'dashboard.welcome': 'Bienvenido de nuevo, {{name}}',
+    'nav.home': 'Inicio',
+    'nav.issues': 'Incidencias',
+    'nav.money': 'Dinero',
+    'nav.docs': 'Documentos',
+    'nav.people': 'Vecinos',
+    'nav.label': 'Secciones',
+    'language.partial': 'traducción parcial',
+    'payments.slideToPay': 'Desliza para pagar ₪{{amount}}',
+    'payments.sending': 'Enviando…',
+    'payments.paidThanks': 'Pagado, gracias',
+    'door.hold': 'Mantén pulsado para ver',
+    'door.tapToCopy': 'Toca el código para copiarlo',
+    'door.copied': 'Copiado',
+    'greeting.morning': 'Buenos días, {{name}}',
+    'greeting.afternoon': 'Buenas tardes, {{name}}',
+    'greeting.evening': 'Buenas noches, {{name}}',
+    'greeting.night': 'Buenas noches, {{name}}',
     'dashboard.quickActions': 'Acciones rápidas',
     'dashboard.reportIssue': 'Reportar un problema',
     'dashboard.building': 'Edificio',
-    'dashboard.messages': 'Mensajes',
-    'dashboard.noMessages': 'Todavía no hay mensajes.',
-    'dashboard.noMessagesOfType': 'No hay mensajes de este tipo.',
-    'dashboard.newMessage': 'Nuevo mensaje',
     'dashboard.filterAll': 'Todos',
-    'dashboard.messageTypeLabel': 'Tipo',
-    'dashboard.messageTitleLabel': 'Título',
-    'dashboard.messageDescriptionLabel': 'Detalles (opcional)',
-    'dashboard.postMessage': 'Publicar',
-    'dashboard.postMessageError': 'No se pudo publicar tu mensaje. Inténtalo de nuevo.',
     'dashboard.entryCode': 'Código de entrada',
     'dashboard.memberCount': '{{count}} residentes en buildy',
     'dashboard.contacts': 'Contactar con el edificio',
-    'messageType.general': 'General',
-    'messageType.urgent': 'Urgente',
-    'messageType.maintenance': 'Mantenimiento',
     'contactType.whatsapp': 'Grupo de WhatsApp',
     'contactType.phone': 'Teléfono',
     'contactType.email': 'Correo electrónico',
@@ -1627,23 +2177,16 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'myUnit.monthlyPayment': 'Cuota mensual',
     'relationType.owner': 'Propietario',
     'relationType.tenant': 'Inquilino',
+    'paymentMethod.card': 'Tarjeta de crédito',
     'paymentMethod.cash': 'Efectivo',
     'paymentMethod.transfer': 'Transferencia bancaria',
-    'paymentMethod.bit': 'Bit',
-    'paymentMethod.paybox': 'PayBox',
-    'joinBuilding.title': 'Encuentra tu edificio',
-    'joinBuilding.subtitle': 'Selecciona tu edificio e introduce su contraseña de acceso.',
-    'joinBuilding.passwordLabel': 'Contraseña del edificio',
-    'joinBuilding.wrongPassword': 'Contraseña incorrecta. Inténtalo de nuevo.',
-    'joinBuilding.genericError': 'No se pudo unir a este edificio. Inténtalo de nuevo.',
-    'joinBuilding.confirm': '¡Ya eres parte!',
+    'paymentMethod.bit_paybox': 'Bit / PayBox',
     'settings.title': 'Configuración de la cuenta',
     'settings.subtitle': 'Administra tu perfil y tu cuenta',
     'settings.email': 'Correo electrónico',
     'settings.emailVerified': 'Correo verificado',
     'settings.verified': 'Verificado',
     'settings.notVerified': 'No verificado',
-    'settings.userId': 'ID de usuario',
     'settings.backToHome': 'Volver al inicio',
     'settings.nameLabel': 'Nombre',
     'settings.languageLabel': 'Idioma',
@@ -1665,10 +2208,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'settings.leaveConfirmInstruction': 'Escribe "{{phrase}}" para confirmar.',
     'settings.leaveConfirmPlaceholder': 'Escribe {{phrase}}',
     'common.delete': 'Eliminar',
-    'messages.editTitle': 'Editar mensaje',
-    'messages.deleteTitle': '¿Eliminar este mensaje?',
-    'messages.deleteBody': 'Se eliminará para todos los residentes del edificio.',
-    'messages.actionError': 'No se pudo actualizar el mensaje. Inténtalo de nuevo.',
     'admin.sectionTitle': 'Administración',
     'admin.sectionDescription': 'Crea, edita y elimina edificios y sus mensajes.',
     'admin.openPanel': 'Abrir panel de administración',
@@ -1682,12 +2221,10 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.deleteConfirmInstruction': 'Escribe el nombre del edificio para confirmar.',
     'admin.saveError': 'No se pudo guardar el edificio. Inténtalo de nuevo.',
     'admin.duplicateError': 'Ya existe un edificio con esta dirección en esta ciudad.',
-    'admin.passwordKeep': 'Nueva contraseña (déjala vacía para mantener la actual)',
     'admin.identityAdminOnly': 'El nombre, la ciudad y la dirección solo los puede cambiar un administrador',
     'admin.fieldName': 'Nombre',
     'admin.fieldCity': 'Ciudad',
     'admin.fieldAddress': 'Dirección',
-    'admin.fieldPassword': 'Contraseña de acceso',
     'admin.fieldDescription': 'Descripción',
     'wizard.name.title': '¿Cómo se llama el edificio?',
     'wizard.name.subtitle': 'Los residentes verán este nombre en su pantalla de inicio.',
@@ -1700,9 +2237,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'wizard.address.placeholder': 'p. ej. Ben Yehuda 14',
     'wizard.details.title': 'Algunos detalles',
     'wizard.details.subtitle': 'Opcional: puedes completarlos más tarde.',
-    'wizard.password.title': 'Define una contraseña de acceso',
-    'wizard.password.subtitle': 'Los residentes introducen esta contraseña para unirse al edificio. Compártela solo con ellos.',
-    'wizard.password.placeholder': 'Al menos 4 caracteres',
     'wizard.review.title': '¿Listo para crear?',
     'wizard.review.subtitle': 'Revisa los datos a continuación.',
     'wizard.review.create': 'Crear edificio',
@@ -1776,15 +2310,11 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'admin.backToApp': 'Volver a la app',
     'admin.tabOverview': 'Resumen',
     'admin.tabMembers': 'Residentes',
-    'admin.tabMessages': 'Mensajes',
     'admin.tabDocuments': 'Documentos',
     'role.management_company': 'Empresa administradora',
     'members.management': 'Administración del edificio',
     'common.formerResident': 'Exresidente',
     'dashboard.editDetails': 'Editar detalles',
-    'dashboard.joinAnother': 'Unirse a otro edificio',
-    'joinBuilding.blocked': 'Te han bloqueado en este edificio. Contacta con la administración del edificio.',
-    'joinBuilding.tooManyTries': 'Demasiadas contraseñas incorrectas. Inténtalo de nuevo en 15 minutos.',
     'layout.sectionTitle': 'Diseño de inicio',
     'layout.editToggle': 'Editar el diseño de inicio',
     'layout.editToggleHint': 'Si está activado, pasa el cursor sobre un mosaico del inicio para moverlo o cambiar su tamaño.',
@@ -1800,14 +2330,9 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'members.block': 'Bloquear',
     'members.blockConfirm': '¿Bloquear a {{name}}?',
     'members.blockHint': 'Se le quitará del edificio y no podrá volver hasta que se le desbloquee.',
-    'members.removeHint': 'Podrá volver con la contraseña del edificio.',
     'members.blockedTitle': 'Bloqueados',
     'members.blockedBy': 'Bloqueado por {{name}}',
     'members.unblock': 'Desbloquear',
-    'members.pending': 'Pendiente: {{details}}',
-    'members.approve': 'Aprobar',
-    'members.pendingCount': '{{count}} pendientes',
-    'myUnit.pending': 'Esperando la confirmación de la administración del edificio: {{details}}',
     'myUnit.setByManagement': 'La administración del edificio define los apartamentos y los datos de pago.',
     'settings.phoneLabel': 'Teléfono',
     'settings.phoneHint': 'Opcional. Solo lo ven la administración del edificio y los administradores.',
@@ -1826,15 +2351,6 @@ export const TRANSLATIONS: Record<LanguageCode, Dict> = {
     'picture.notImage': 'Elige un archivo de imagen.',
     'picture.pendingUpload': 'Nueva foto lista: pulsa Guardar para conservarla.',
     'picture.pendingRemove': 'La foto se quitará cuando pulses Guardar.',
-    'setup.title': 'Termina de configurar tu cuenta',
-    'setup.open': 'Terminar configuración',
-    'setup.bannerHint': 'indícanos tu apartamento en este edificio.',
-    'setup.apartmentHint': 'El número de tu apartamento y si eres propietario o inquilino. La administración del edificio lo confirmará.',
-    'setup.optionalHint': 'Opcional: puedes saltarlo y añadirlo más tarde en Ajustes.',
-    'setup.later': 'Más tarde',
-    'setup.back': 'Atrás',
-    'setup.skip': 'Saltar',
-    'setup.finish': 'Terminar',
     'userMenu.emailVerified': 'Correo verificado',
     'userMenu.signOut': 'Cerrar sesión',
   },

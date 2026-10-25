@@ -15,11 +15,21 @@ services:
   backend:
     build:
       target: build
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm run start:dev"
+    # `prisma generate` first: migrate deploy doesn't refresh the client, and a stale one crashes the seed.
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run start:dev"
     environment:
       # Windows -> container bind mounts don't deliver file-change events; poll instead.
       TSC_WATCHFILE: DynamicPriorityPolling
       TSC_WATCHDIRECTORY: DynamicPriorityPolling
+      # Also allow the phone: LAN_IP is set in the root .env (your PC's Wi-Fi IPv4).
+      CORS_ORIGIN: http://localhost:8080,http://${LAN_IP:-localhost}:8080
+      # Testing only: a payments "month" lasts 5 minutes, so opening / paying / history can be
+      # demonstrated quickly. Remove (or set 0) for real calendar months.
+      PAYMENTS_PERIOD_MINUTES: '5'
+      # Dev only: "sign in as" a seeded mock user (no Google login), and seed the "Dev Playground"
+      # building where they hold every role. Never set in production (the backend refuses to start
+      # with it when NODE_ENV=production).
+      DEV_LOGIN: 'true'
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -32,6 +42,8 @@ services:
     command: npm run dev -- --host 0.0.0.0 --port 80
     environment:
       VITE_USE_POLLING: 'true'
+      # Shows the dev "Sign in as…" list on the sign-in page (works only with the backend's DEV_LOGIN).
+      VITE_DEV_LOGIN: 'true'
     volumes:
       - ./frontend:/app
       - /app/node_modules

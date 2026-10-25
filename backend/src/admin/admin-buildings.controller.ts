@@ -2,6 +2,8 @@ import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Patc
 import { AdminGuard } from '../auth/admin.guard.js';
 import { AdminBuildingsService } from './admin-buildings.service.js';
 import { ContactLinkDto, CreateBuildingDto, SetMemberRoleDto, UpdateBuildingDto } from './dto/building.dto.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthUser } from '../auth/auth-user.type.js';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -9,8 +11,14 @@ export class AdminBuildingsController {
   constructor(private readonly adminBuildingsService: AdminBuildingsService) {}
 
   @Get('buildings')
-  list() {
-    return this.adminBuildingsService.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.adminBuildingsService.list(user.cognitoSub);
+  }
+
+  /** The admin joins this building with a role (it then shows on their own home screen). */
+  @Post('buildings/:id/join')
+  join(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: SetMemberRoleDto) {
+    return this.adminBuildingsService.join(user.cognitoSub, id, dto.role);
   }
 
   @Post('buildings')

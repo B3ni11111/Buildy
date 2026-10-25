@@ -59,7 +59,7 @@ export default function LanguageStep({ initialValue, onSubmit }: LanguageStepPro
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <Typography sx={{ fontWeight: 600 }}>{opt.nativeLabel}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {opt.label}
+                  {opt.partial ? `${opt.label} · ${t('language.partial')}` : opt.label}
                 </Typography>
               </Box>
               {isSelected && <CheckCircleIcon sx={{ color: 'primary.main' }} fontSize="small" />}

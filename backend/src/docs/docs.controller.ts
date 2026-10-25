@@ -7,12 +7,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { DocsService, MAX_UPLOAD_BYTES, type UploadedFileData } from './docs.service.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
@@ -64,12 +62,8 @@ export class DocDetailController {
   constructor(private readonly docsService: DocsService) {}
 
   @Get(':id/file')
-  async download(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Res() res: Response) {
-    const { path, fileName, mimeType } = await this.docsService.file(user.cognitoSub, id);
-    res.type(mimeType);
-    // Browsers must use the stored (allow-listed) type, never guess one from the content.
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.download(path, fileName);
+  download(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.docsService.file(user.cognitoSub, id);
   }
 
   @Patch(':id')

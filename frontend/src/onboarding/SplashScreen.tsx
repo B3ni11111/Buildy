@@ -35,7 +35,7 @@ export default function SplashScreen({ onContinue }: SplashScreenProps) {
         <Typography
           variant="h1"
           sx={{
-            fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+            fontFamily: '"Rubik", system-ui, sans-serif',
             fontWeight: 600,
             color: 'white',
             mb: 2,

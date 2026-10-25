@@ -65,7 +65,7 @@ export default function Callback() {
             <Typography
               variant="h4"
               sx={{
-                fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                fontFamily: '"Rubik", system-ui, sans-serif',
                 fontWeight: 600,
                 mb: 1,
               }}
@@ -100,7 +100,7 @@ export default function Callback() {
             <Typography
               variant="h3"
               sx={{
-                fontFamily: '"Georgia","Iowan Old Style","Palatino Linotype",serif',
+                fontFamily: '"Rubik", system-ui, sans-serif',
                 fontWeight: 600,
                 color: 'error.main',
                 mb: 1,

@@ -12,6 +12,7 @@ import {
   saveTokens,
 } from '../utils/cognito';
 import { clearOnboardingData } from '../utils/onboarding';
+import { isDevToken } from '../utils/devLogin';
 import { Box, CircularProgress } from '@mui/material';
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -51,8 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Sign out for real: also ends the Cognito session, so the next sign-in can pick another account. */
   const logout = useCallback(() => {
+    // A dev "sign in as" session has no Cognito session to end.
+    const dev = isDevToken(getStoredTokens()?.id_token);
     clearSession();
-    window.location.assign(getLogoutUrl());
+    window.location.assign(dev ? '/' : getLogoutUrl());
   }, [clearSession]);
 
   /** Swap the refresh token for new id/access tokens; false if the session can't be renewed. */

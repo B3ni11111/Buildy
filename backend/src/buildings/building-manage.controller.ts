@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseBoolPipe, ParseIntPipe, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { BuildingsService } from './buildings.service.js';
-import { SetApartmentsDto, UpdateBuildingDetailsDto } from './dto/manage.dto.js';
+import { AddMembersDto, SetApartmentsDto, UpdateBuildingDetailsDto } from './dto/manage.dto.js';
 import { ContactLinkDto } from '../admin/dto/building.dto.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthUser } from '../auth/auth-user.type.js';
@@ -9,6 +9,16 @@ import type { AuthUser } from '../auth/auth-user.type.js';
 @Controller('buildings/:buildingId/manage')
 export class BuildingManageController {
   constructor(private readonly buildingsService: BuildingsService) {}
+
+  /** Adds residents by their user IDs (bulk, all or nothing). */
+  @Post('members')
+  addMembers(
+    @CurrentUser() user: AuthUser,
+    @Param('buildingId', ParseUUIDPipe) buildingId: string,
+    @Body() dto: AddMembersDto,
+  ) {
+    return this.buildingsService.addMembers(user.cognitoSub, buildingId, dto.residents);
+  }
 
   @Put('members/:userId/apartments')
   setApartments(

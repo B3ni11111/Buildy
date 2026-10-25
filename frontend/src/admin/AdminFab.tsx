@@ -26,7 +26,7 @@ export default function AdminFab({ viewAs, onViewAsChange, onOpenConsole, consol
   ];
 
   return (
-    <Box sx={{ position: 'fixed', bottom: 24, insetInlineEnd: 24, zIndex: 1100 }}>
+    <Box sx={{ position: 'fixed', bottom: 56, insetInlineEnd: 24, zIndex: 1100 }}>
       <Tooltip title={t('adminFab.tooltip')} placement={dir === 'rtl' ? 'right' : 'left'}>
         <Fab
           color={viewAs ? 'default' : 'primary'}

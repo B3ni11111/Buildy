@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Reflector } from '@nestjs/core';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
+import { devLoginEnabled, parseDevToken } from './dev-login.js';
 
 @Injectable()
 export class CognitoAuthGuard implements CanActivate {
@@ -12,6 +13,9 @@ export class CognitoAuthGuard implements CanActivate {
     const clientId = process.env.COGNITO_CLIENT_ID;
     if (!userPoolId || !clientId) {
       throw new Error('COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID must be set to verify Cognito tokens');
+    }
+    if (devLoginEnabled() && process.env.NODE_ENV === 'production') {
+      throw new Error('DEV_LOGIN must never be enabled in production');
     }
     this.verifier = CognitoJwtVerifier.create({
       userPoolId,
@@ -33,8 +37,18 @@ export class CognitoAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing bearer token');
     }
 
+    const token = authHeader.slice('Bearer '.length);
+    // Dev only: "sign in as" a seeded mock user (see dev-login.ts).
+    if (devLoginEnabled()) {
+      const devUser = parseDevToken(token);
+      if (devUser) {
+        request.user = devUser;
+        return true;
+      }
+    }
+
     try {
-      const payload = await this.verifier.verify(authHeader.slice('Bearer '.length));
+      const payload = await this.verifier.verify(token);
       request.user = {
         cognitoSub: payload.sub,
         email: payload.email as string | undefined,

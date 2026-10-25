@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -24,7 +23,6 @@ const BUILDINGS: {
   name: string;
   cityId: number;
   address: string;
-  password: string;
   description: string;
   entryCode: string;
   contacts: SeedContact[];
@@ -33,7 +31,6 @@ const BUILDINGS: {
     name: 'Maple Court',
     cityId: TEL_AVIV,
     address: '14 Ben Yehuda St',
-    password: 'maple-2026',
     description: '6 floors, 24 units. Elevator serviced every March.',
     entryCode: '1948',
     contacts: [
@@ -45,7 +42,6 @@ const BUILDINGS: {
     name: 'Rothschild Gardens',
     cityId: TEL_AVIV,
     address: '82 Rothschild Blvd',
-    password: 'rothschild-2026',
     description: 'Bauhaus building, 4 floors, shared rooftop.',
     entryCode: '0821',
     contacts: [
@@ -57,12 +53,89 @@ const BUILDINGS: {
     name: 'HaYarkon Terrace',
     cityId: TEL_AVIV,
     address: '210 HaYarkon St',
-    password: 'yarkon-2026',
     description: 'Sea-facing, 9 floors, underground parking.',
     entryCode: '2100',
     contacts: [{ type: 'phone', link: '+972-3-555-0210' }],
   },
 ];
+
+// Mock residents for trying the add-by-ID flow. They have no Cognito login: a committee head pastes
+// their IDs, and in dev (DEV_LOGIN=true) the sign-in page can "sign in as" them. Fixed IDs, so they're
+// the same on every machine.
+const MOCK_USERS = [
+  'Noa Levi',
+  'Daniel Cohen',
+  'Maya Mizrahi',
+  'Yossi Peretz',
+  'Tamar Katz',
+  'Omer Biton',
+  'Shira Dahan',
+  'Avi Friedman',
+  'Lior Azulay',
+  'Rina Shapiro',
+].map((name, i) => ({
+  id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`,
+  cognitoSub: `mock-user-${i + 1}`,
+  name,
+  email: `mock${i + 1}@buildy.test`,
+}));
+
+/**
+ * Dev only (DEV_LOGIN=true): a building where the mock users hold every role, so each flow can be
+ * tried by "signing in as" them (dev login). Create-only: once it exists it is left alone, so
+ * whatever was done while testing survives a restart. Delete it from the admin console to reset.
+ */
+const PLAYGROUND = { name: 'Dev Playground', address: '1 Test St' };
+const mockId = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const PLAYGROUND_ROLES: { user: number; role: 'committee_head' | 'management_company' | 'resident' }[] = [
+  { user: 1, role: 'committee_head' }, // Noa: committee head, also owns and lives in apt 1
+  { user: 2, role: 'resident' }, // Daniel: owns apt 2 (rented out to Maya)
+  { user: 3, role: 'resident' }, // Maya: renter in apt 2
+  { user: 4, role: 'resident' }, // Yossi: owns apt 3 and apt 4
+  { user: 5, role: 'resident' }, // Tamar: renter in apt 3
+  { user: 6, role: 'management_company' }, // Omer: management company, no apartment
+];
+const PLAYGROUND_APARTMENTS: { number: number; floor: number; fee: number | null; method: 'card' | 'cash' | 'transfer' | 'bit_paybox' | null; residents: { user: number; relation: 'owner' | 'tenant' }[] }[] = [
+  { number: 1, floor: 1, fee: null, method: null, residents: [{ user: 1, relation: 'owner' }] },
+  { number: 2, floor: 1, fee: 450, method: 'bit_paybox', residents: [{ user: 2, relation: 'owner' }, { user: 3, relation: 'tenant' }] },
+  { number: 3, floor: 2, fee: null, method: 'cash', residents: [{ user: 4, relation: 'owner' }, { user: 5, relation: 'tenant' }] },
+  { number: 4, floor: 3, fee: 600, method: 'transfer', residents: [{ user: 4, relation: 'owner' }] },
+];
+// The only mock admin (dev only): Claude's account for testing the admin console. No other mock user is an admin.
+const DEV_ADMIN = { id: mockId(11), cognitoSub: 'mock-user-11', name: 'claudeAdminTesting', email: 'claude-admin@buildy.test' };
+
+async function seedDevPlayground() {
+  const exists = await prisma.building.findUnique({ where: { cityId_address: { cityId: TEL_AVIV, address: PLAYGROUND.address } } });
+  await prisma.user.updateMany({ where: { cognitoSub: { startsWith: 'mock-user-' }, NOT: { id: DEV_ADMIN.id } }, data: { isAdmin: false } });
+  await prisma.user.upsert({
+    where: { cognitoSub: DEV_ADMIN.cognitoSub },
+    update: { isAdmin: true },
+    create: { ...DEV_ADMIN, isAdmin: true, language: 'en', onboardedAt: new Date() },
+  });
+  if (exists) {
+    console.log(`Dev playground: "${PLAYGROUND.name}" already exists (left as is).`);
+    return;
+  }
+  await prisma.$transaction(async (tx) => {
+    const building = await tx.building.create({
+      data: { name: PLAYGROUND.name, cityId: TEL_AVIV, address: PLAYGROUND.address, description: 'Dev-only building for trying every role.', entryCode: '1234' },
+    });
+    for (const { user, role } of PLAYGROUND_ROLES) {
+      await tx.buildingUser.create({ data: { buildingId: building.id, userId: mockId(user) } });
+      await tx.userRoleAssignment.create({ data: { buildingId: building.id, userId: mockId(user), role } });
+    }
+    for (const apt of PLAYGROUND_APARTMENTS) {
+      const apartment = await tx.apartment.create({
+        data: { buildingId: building.id, number: apt.number, floor: apt.floor, monthlyPayment: apt.fee, paymentMethod: apt.method },
+      });
+      for (const r of apt.residents) {
+        await tx.apartmentResident.create({ data: { apartmentId: apartment.id, userId: mockId(r.user), relationType: r.relation } });
+      }
+    }
+    await tx.buildingPaymentSettings.create({ data: { buildingId: building.id, openMode: 'manual', openDay: 1, defaultFee: 400, defaultMethod: 'card' } });
+  });
+  console.log(`Dev playground: created "${PLAYGROUND.name}" (mock users 1-6); ${DEV_ADMIN.name} is the only mock admin.`);
+}
 
 async function main() {
   // Insert-only: existing codes are left untouched, so re-running is a no-op.
@@ -70,9 +143,6 @@ async function main() {
   console.log(`Cities: ${count} inserted (${CITIES.length} in source).`);
 
   for (const building of BUILDINGS) {
-    const passwordHash = await hash(building.password, 10);
-    // create-only: an existing row's passwordHash is left alone, so a manual
-    // password change survives future `docker compose up` / seed re-runs.
     const row = await prisma.building.upsert({
       where: { cityId_address: { cityId: building.cityId, address: building.address } },
       update: {},
@@ -80,12 +150,11 @@ async function main() {
         name: building.name,
         cityId: building.cityId,
         address: building.address,
-        passwordHash,
         description: building.description,
         entryCode: building.entryCode,
       },
     });
-    // Only add demo contact links to a building that has none yet.
+    // Create-only: an existing building is left alone. Only add demo contact links to a building that has none yet.
     const existingLinks = await prisma.contactLink.count({ where: { buildingId: row.id } });
     if (existingLinks === 0) {
       await prisma.contactLink.createMany({
@@ -93,6 +162,17 @@ async function main() {
       });
     }
   }
+  for (const user of MOCK_USERS) {
+    // create-only: editing a mock user (e.g. a picture) survives re-seeding
+    await prisma.user.upsert({
+      where: { cognitoSub: user.cognitoSub },
+      update: {},
+      create: { ...user, language: 'en', onboardedAt: new Date() },
+    });
+  }
+  const idList = MOCK_USERS.map((u) => `  ${u.id}  ${u.name}`).join('\n');
+  console.log(`Mock users (paste these IDs into "Add residents"):\n${idList}`);
+  if (process.env.DEV_LOGIN === 'true') await seedDevPlayground();
   console.log(`Seed complete: ${BUILDINGS.length} buildings ensured.`);
 }
 

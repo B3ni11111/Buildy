@@ -6,7 +6,9 @@ export interface City {
 export type ContactType = 'email' | 'whatsapp' | 'phone';
 /** `tenant` = renter. */
 export type RelationType = 'owner' | 'tenant';
-export type PaymentMethod = 'cash' | 'transfer' | 'bit' | 'paybox';
+/** Bit and PayBox count as one method. */
+export const PAYMENT_METHODS = ['card', 'cash', 'transfer', 'bit_paybox'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export interface ContactLink {
   id: number;
@@ -26,18 +28,13 @@ export interface Picture {
 
 /** One of the user's apartments in a building (technical info, set by building management). */
 export interface MyApartment {
+  id: number;
   number: number;
   floor: number | null;
   sqrm: number | null;
   monthlyPayment: number | null;
   paymentMethod: PaymentMethod | null;
   relationType: RelationType;
-}
-
-/** What the user suggested when joining — pending until management confirms. */
-export interface JoinRequest {
-  apartment: number | null;
-  relationType: RelationType | null;
 }
 
 /** Summary shape — what the building picker (GET /buildings) returns. */
@@ -58,22 +55,67 @@ export interface Building extends BuildingSummary {
   /** Committee head / management company here, or an admin. */
   canManage: boolean;
   myApartments: MyApartment[];
-  myRequest: JoinRequest | null;
 }
 
-export const MESSAGE_TYPES = ['general', 'urgent', 'maintenance'] as const;
-export type MessageType = (typeof MESSAGE_TYPES)[number];
+export const ISSUE_STATUSES = ['opened', 'in_process', 'denied', 'resolved'] as const;
+export type IssueStatus = (typeof ISSUE_STATUSES)[number];
 
-export interface Message {
+/** A picture or file on an issue (the file itself is fetched with the auth header). */
+export interface IssueAttachment {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  uploader: { id: string; name: string | null } | null;
+}
+
+/** One status change by building management, with its required note. */
+export interface IssueUpdate {
+  id: string;
+  fromStatus: IssueStatus;
+  toStatus: IssueStatus;
+  text: string;
+  createdAt: string;
+  author: { id: string; name: string | null } | null;
+  attachments: IssueAttachment[];
+  /** Set (to the end of the 5-minute undo window) only on the viewer's own newest update. */
+  undoableUntil?: string | null;
+}
+
+/** What the viewer took back with Undo: their note and files, to edit and send again. */
+export interface IssueDraft {
+  text: string;
+  fromStatus: IssueStatus;
+  toStatus: IssueStatus;
+  attachments: IssueAttachment[];
+}
+
+export interface Issue {
   id: string;
   buildingId: string;
   /** null = the author deleted their account ("Former resident"). */
-  authorId: string | null;
   author: { id: string; name: string | null } | null;
-  type: MessageType;
   title: string;
   description: string | null;
-  uploadDate: string;
+  status: IssueStatus;
+  createdAt: string;
+  statusChangedAt: string;
+  lastPingedAt: string | null;
+  /** In the list: the first few pictures of the report, for small previews. */
+  attachments?: Pick<IssueAttachment, 'id' | 'fileName' | 'mimeType'>[];
+  /** Pinged within the last week. */
+  pingedRecently: boolean;
+  /** For the author of an active issue: when they may ping it next (may be in the past = now). */
+  canPingAt: string | null;
+  _count: { attachments: number; updates: number };
+}
+
+/** An issue with its report files and status timeline (GET /issues/:id). */
+export interface IssueDetail extends Issue {
+  attachments: IssueAttachment[];
+  updates: IssueUpdate[];
+  draft?: IssueDraft | null;
 }
 
 /** The signed-in user as the backend sees them (GET /users/me). */
@@ -99,17 +141,38 @@ export interface AdminBuilding {
   createdAt: string;
   city: City;
   contactLinks: ContactLink[];
-  _count: { members: number; messages: number; docs: number };
+  _count: { members: number; issues: number; docs: number };
+  /** The admin viewing the console is a member (the list sends it; create/update responses don't). */
+  joined?: boolean;
 }
 
 export interface BuildingInput {
   name: string;
   cityId: number;
   address: string;
-  password: string;
   description?: string | null;
   entryCode?: string | null;
   contactLinks?: ContactLinkInput[];
+  /** First residents, added by their user IDs. */
+  residents?: ResidentInput[];
+  /** The wizard's payments step. */
+  payments?: PaymentSettings;
+}
+
+/** Someone management adds by their user ID, with their apartments. */
+export interface ResidentInput {
+  userId: string;
+  apartments: ApartmentInput[];
+}
+
+/** What building management sees for a pasted user ID before adding them. */
+export interface UserPreview {
+  userId: string;
+  name: string | null;
+  picture: Picture;
+  isMe: boolean;
+  alreadyMember: boolean;
+  blocked: boolean;
 }
 
 /** An apartment as shown on the members list; size/fee/payment only reach building management. */
@@ -131,7 +194,6 @@ export interface Member {
   /** Only present for building management / admins. */
   phone?: string | null;
   isAdmin?: boolean;
-  request?: JoinRequest | null;
 }
 
 /** One apartment as building management sets it for a member. */
@@ -162,6 +224,100 @@ export interface Doc {
   /** null = the uploader deleted their account ("Former resident"). */
   uploader: { id: string; name: string | null } | null;
 }
+
+export type PaymentStatus = 'unpaid' | 'pending' | 'paid' | 'failed';
+
+export type PaymentConfirmation = 'single' | 'bulk' | 'self' | 'automatic';
+export type PaymentsOpenMode = 'manual' | 'auto';
+
+/** A building's payments setup. */
+export interface PaymentSettings {
+  openMode: PaymentsOpenMode;
+  /** Day of the month (1-28) an automatic month opens. */
+  openDay: number;
+  /** Fee of every apartment that has none of its own. */
+  defaultFee: number | null;
+  defaultMethod: PaymentMethod | null;
+}
+
+/** One apartment's charge for a month. */
+export interface PaymentCharge {
+  amount: number;
+  status: PaymentStatus;
+  paidAt: string | null;
+  method?: PaymentMethod | null;
+}
+
+export interface PersonRef {
+  id: string;
+  name: string | null;
+}
+
+/** One row of a payments log (building-wide for management, one apartment for a resident). */
+export interface PaymentLogRow {
+  id: string;
+  /** The period it is for: YYYY-MM (or a full time in test mode). */
+  period: string;
+  apartmentNumber: number;
+  amount: number;
+  status: PaymentStatus;
+  paidAt: string | null;
+  paidBy: PersonRef | null;
+  confirmedBy: PersonRef | null;
+  confirmation: PaymentConfirmation | null;
+  method: PaymentMethod | null;
+}
+
+/** The month's budget for building management (GET /buildings/:id/manage/payments). */
+export interface PaymentsOverview {
+  /** YYYY-MM (or a full time in the dev-only 5-minute test mode). */
+  month: string;
+  /** null = payments aren't set up yet. */
+  settings: PaymentSettings | null;
+  /** Management has opened the month (created the charges). */
+  opened: boolean;
+  /** Apartments without a charge yet (added after the month was opened). */
+  missing: number;
+  goal: number;
+  collected: number;
+  /** collected === goal (and there is something to collect). */
+  complete: boolean;
+  apartments: {
+    apartmentId: number;
+    number: number;
+    floor: number | null;
+    sqrm: number | null;
+    /** The standing monthly fee that future months copy (its own, else the building's default). */
+    fee: number;
+    /** Pre-selected method when marking it paid. */
+    method: PaymentMethod;
+    /** Who pays (chosen by an owner; an owner by default). */
+    payer: PersonRef | null;
+    residents: { userId: string; name: string | null; relationType: RelationType }[];
+    /** null = no charge for this apartment this month yet. */
+    payment: PaymentCharge | null;
+  }[];
+}
+
+/** A resident's own part (GET /buildings/:id/payments/mine). */
+export interface MyPayments {
+  month: string;
+  apartments: {
+    apartmentId: number;
+    number: number;
+    relationType: RelationType;
+    payer: PersonRef | null;
+    /** Only the payer gets the Pay button. */
+    isPayer: boolean;
+    /** Owners choose who pays. */
+    canChoosePayer: boolean;
+    residents: { userId: string; name: string | null; relationType: RelationType }[];
+    payment: PaymentCharge | null;
+  }[];
+  history: { period: string; apartmentNumber: number; amount: number; status: PaymentStatus; paidAt: string | null }[];
+}
+
+export type FeeScope = 'once' | 'permanent';
 
 export interface ContactLinkInput {
   type: ContactType;

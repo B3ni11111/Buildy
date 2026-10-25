@@ -1,6 +1,19 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsInt, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { ContactType, UserRole } from '@prisma/client';
+import { ResidentEntryDto } from '../../buildings/dto/manage.dto.js';
+import { PaymentSettingsDto } from '../../payments/payments.dto.js';
 
 export class CreateBuildingDto {
   @IsString()
@@ -13,11 +26,6 @@ export class CreateBuildingDto {
   @IsString()
   @MinLength(1)
   address!: string;
-
-  /** Shared join password, stored hashed. */
-  @IsString()
-  @MinLength(4)
-  password!: string;
 
   @IsOptional()
   @IsString()
@@ -33,6 +41,26 @@ export class CreateBuildingDto {
   @ValidateNested({ each: true })
   @Type(() => ContactLinkDto)
   contactLinks?: ContactLinkDto[];
+
+  /** First residents, added by their user IDs (the wizard's bulk list). */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => ResidentEntryDto)
+  residents?: ResidentEntryDto[];
+
+  /** The wizard's payments step; without it, management sets payments up later from the tile. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PaymentSettingsDto)
+  payments?: PaymentSettingsDto;
+}
+
+/** "Create a building" by a regular user, who picks their own management role. */
+export class CreateMyBuildingDto extends CreateBuildingDto {
+  @IsIn(['committee_head', 'management_company'])
+  role!: 'committee_head' | 'management_company';
 }
 
 export class UpdateBuildingDto {
@@ -49,12 +77,6 @@ export class UpdateBuildingDto {
   @IsString()
   @MinLength(1)
   address?: string;
-
-  /** Omit to keep the current password. */
-  @IsOptional()
-  @IsString()
-  @MinLength(4)
-  password?: string;
 
   @IsOptional()
   @IsString()

@@ -26,12 +26,13 @@ services:
       PORT: 3000
       COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:?COGNITO_USER_POOL_ID must be set in a root .env file}
       COGNITO_CLIENT_ID: ${COGNITO_CLIENT_ID:?COGNITO_CLIENT_ID must be set in a root .env file}
-      # Uploaded documents live on this named volume so they survive container rebuilds.
-      UPLOADS_DIR: /app/uploads
+      # Uploaded files live in a private S3 bucket (see backend/README.md).
+      AWS_REGION: ${AWS_REGION:?AWS_REGION must be set in a root .env file}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET must be set in a root .env file}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID must be set in a root .env file}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY must be set in a root .env file}
     ports:
       - '3000:3000'
-    volumes:
-      - uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,4 +48,3 @@ services:
 
 volumes:
   postgres-data:
-  uploads:
