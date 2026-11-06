@@ -22,7 +22,7 @@ COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
 
 # RDS CA bundle, used on AWS (DB_SSL_CA) so the database connection is encrypted AND verified.
-ADD https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /app/rds-ca.pem
+ADD --chmod=644 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /app/rds-ca.pem
 
 EXPOSE 3000
 # Only start the server. Migrations and seed are NOT run here (they would run on every Lambda
