@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module.js';
 import { requestContextMiddleware } from './auth/request-context.js';
 import { ensureDatabaseUrl } from './prisma/database-url.js';
+import { runMigrateServer } from './migrate-server.js';
 
 async function bootstrap() {
   await ensureDatabaseUrl(); // on AWS: builds DATABASE_URL from the Secrets Manager secret
@@ -18,4 +19,8 @@ async function bootstrap() {
   }
   await app.listen(process.env.PORT ?? 3000);
 }
-await bootstrap();
+if (process.env.RUN_MODE === 'migrate') {
+  await runMigrateServer(); // second Lambda: only runs DB migrations on POST (see migrate-server.ts)
+} else {
+  await bootstrap();
+}
