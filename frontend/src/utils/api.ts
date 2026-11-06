@@ -27,7 +27,8 @@ import type { DevUser } from './devLogin';
 
 const CONFIGURED_API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 // Dev on a phone: the page is opened via the PC's LAN IP, where "localhost" would be the phone itself.
-const API_URL = CONFIGURED_API_URL.replace(
+// A trailing slash in VITE_API_URL (e.g. a Lambda function URL) would turn "/cities" into "//cities".
+const API_URL = CONFIGURED_API_URL.replace(/\/+$/, '').replace(
   /^(https?:\/\/)localhost(?=[:/]|$)/,
   (_, scheme) => `${scheme}${window.location.hostname}`,
 );

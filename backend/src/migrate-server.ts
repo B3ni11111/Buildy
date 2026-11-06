@@ -11,7 +11,8 @@ import { ensureDatabaseUrl } from './prisma/database-url.js';
  *
  * GET/HEAD only answer "ok" (the Lambda Web Adapter's readiness check is a GET, and must never
  * run migrations). This Lambda has no public URL; only people with AWS access can invoke it.
- * It never seeds data: seed/demo users must not reach prod.
+ * After migrating it inserts the city list (prisma/seed-cities.ts, insert-only). It never runs the
+ * full seed: demo buildings and mock users must not reach prod.
  */
 export async function runMigrateServer() {
   const port = Number(process.env.PORT ?? 3000);
@@ -33,9 +34,19 @@ export async function runMigrateServer() {
         env: { ...process.env, DATABASE_URL: url, HOME: '/tmp' }, // Lambda only lets us write in /tmp
         encoding: 'utf8',
       });
-      const ok = result.status === 0;
+      let report = `exit ${result.status}\n${result.stdout}\n${result.stderr}\n${result.error ?? ''}`;
+      let ok = result.status === 0;
+      if (ok) {
+        // Reference data the app needs (the city list). Insert-only, no demo users.
+        const cities = spawnSync('node_modules/.bin/tsx', ['prisma/seed-cities.ts'], {
+          env: { ...process.env, HOME: '/tmp' }, // plain DATABASE_URL: SSL comes from DB_SSL_CA in the script
+          encoding: 'utf8',
+        });
+        ok = cities.status === 0;
+        report += `\n--- cities ---\nexit ${cities.status}\n${cities.stdout}\n${cities.stderr}\n${cities.error ?? ''}`;
+      }
       res.writeHead(ok ? 200 : 500, { 'content-type': 'text/plain' });
-      res.end(`exit ${result.status}\n${result.stdout}\n${result.stderr}\n${result.error ?? ''}`);
+      res.end(report);
     } catch (err) {
       res.writeHead(500, { 'content-type': 'text/plain' });
       res.end(`failed: ${err instanceof Error ? err.message : String(err)}\n`);
