@@ -3,8 +3,10 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module.js';
 import { requestContextMiddleware } from './auth/request-context.js';
+import { ensureDatabaseUrl } from './prisma/database-url.js';
 
 async function bootstrap() {
+  await ensureDatabaseUrl(); // on AWS: builds DATABASE_URL from the Secrets Manager secret
   const app = await NestFactory.create(AppModule);
   // First, so every guard/service can see the per-request "view as resident" flag.
   app.use(requestContextMiddleware);

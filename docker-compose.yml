@@ -20,6 +20,8 @@ services:
     build:
       context: ./backend
     restart: unless-stopped
+    # Local only: migrate and seed before starting. The image itself only starts the server.
+    command: ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER must be set in a root .env file}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in a root .env file}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set in a root .env file}?schema=public
       CORS_ORIGIN: http://localhost:8080

@@ -12,6 +12,17 @@ A building-resident app. Google/Cognito login → onboarding (profile + preferen
 
 Buildy is the building's single place for people, problems, documents and money, built on trust and transparency (residents see only their own payment state). Money roadmap: (1) demo payments with real DB rows and a fake instant Pay, (2) real payments through a third-party provider (not chosen), (3) receipts/maintenance bills uploaded via Documents become expenses, so the budget becomes a balance. Each step must fit the next: `payments` stays provider-neutral (`provider`, `external_ref`, `status`, amount snapshot per month), docs stay open to a category and an expense link. Demo scope: fixed fee per apartment, fee change affects the current goal and future months only, head toggles paid / select all, building budget shows `collected / goal` with a ✓ when equal. Interview details: [temporary/payments.md](temporary/payments.md).
 
+### AWS move: infra repo `build-infra` (2026-11-04)
+
+Infra lives in a separate Terraform repo, `../build-infra` (staging and prod each in their own member account, region `eu-west-1` pending). Gotchas it found in this repo:
+- Amplify is **hosting only**. `frontend/amplify/` is an unused Gen 2 starter and `amplify.yml` never runs `ampx pipeline-deploy`, so the Cognito pool is built by Terraform.
+- The backend still needs a few things before it runs on Lambda:
+  - the Lambda Web Adapter in the Dockerfile;
+  - no `migrate && seed` in `CMD`;
+  - `DATABASE_URL` built from the RDS secret;
+  - presigned PUT uploads, because of Lambda's 6 MB request limit.
+- Full list: `build-infra/docs/MISSING-PARTS.md`.
+
 ### Payments demo, as built (2026-10-22)
 
 - `payments` is a permanent log keyed by `(building_id, apartment_number, period)`; `apartment_id` is `SET NULL` and the number is copied, so nothing is lost if an apartment goes. Rows go only with the building.
